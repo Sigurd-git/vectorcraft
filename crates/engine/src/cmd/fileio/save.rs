@@ -216,6 +216,14 @@ fn checked(cmd: &str, f: &str) -> Result<&'static Format> {
     save_format_of(f).map_err(|e| bad(cmd, e))
 }
 
+/// A saved document keeps its format; an untitled native document uses the user's preference.
+fn preferred_save_format<'a>(st: Option<&'a DocState>, prefs: &'a Prefs) -> &'a str {
+    match st {
+        Some(st) if st.path.is_some() || st.format != "vectorcraft" => st.format,
+        _ => &prefs.default_save_format,
+    }
+}
+
 /// Resolve a save of the active document from `{path?, format?, options?}` (see the commands'
 /// params docs).
 pub fn save_plan(s: &Session, mode: SaveMode, p: &Value) -> Result<SavePlan> {
@@ -230,7 +238,7 @@ pub fn save_plan(s: &Session, mode: SaveMode, p: &Value) -> Result<SavePlan> {
         },
         (_, Some(f), _) => checked(cmd, f)?,
         (_, None, Some(f)) => checked(cmd, f.id)?,
-        (_, None, None) => checked(cmd, st.format)?,
+        (_, None, None) => checked(cmd, preferred_save_format(Some(st), &s.prefs))?,
     };
     let path = if mode == SaveMode::Template { path.map(|p| template_path(&p, format)) } else { path };
     let mut given: Map<String, Value> = match p.get("options") {
@@ -747,7 +755,7 @@ fn revert(s: &mut Session, _: &Value) -> Result<Value> {
 fn format_options(s: &mut Session, p: &Value) -> Result<Value> {
     const C: &str = "file.formatOptions";
     let st = s.active();
-    let id = str_param(p, "format").or(st.map(|d| d.format)).unwrap_or("vectorcraft");
+    let id = str_param(p, "format").unwrap_or_else(|| preferred_save_format(st, &s.prefs));
     let f = format(id)
         .filter(|f| f.write || SAVE_FORMATS.contains(&f.id) || TEMPLATE_FORMATS.contains(&f.id))
         .ok_or_else(|| bad(C, format!("`{id}` is no writable format (see document.formats)")))?;
@@ -773,7 +781,7 @@ pub(super) fn specs() -> Vec<CommandSpec> {
             "Save Document",
             [],
             None,
-            "{path?, format?: vectorcraft|template|pdf|svg|svgz|ai (default: the path's extension, else the document's own format), options?: {…the format's options, see file.formatOptions; default: as last saved}, svg?: {…SVG options} (an SVG save keeps hidden layers, display:none, unless hiddenLayers is false), …the SVG and PDF options given flat instead, compress?: bool (native, also in options: gzip; default: the useCompression preference), version?: 4 (3, 2 or 1: for older VectorCraft versions; 1 and 2 are never compressed), preview?: false (embed a PNG of the first artboard, at most 256 px), separateArtboards?: false (native and .ai: also save each artboard of `range` to <name>-<artboard>.<ext> beside the file, holding that artboard and the art touching it; the result's files lists every file written), range?: \"1-3, 5\"|\"all\" (default; with separateArtboards), includeLinked?: false (keep linked files' own pixels, not just their previews; they stay linked), embedProfiles?: true (carry the ICC profiles loaded from files that the document is tagged with; opening the file installs them where missing), pdfCompatible?: false for native (also carry a PDF of every artboard) | true for .ai (false: blank pages, only the native document; a .ai file's compress, default true, is its compression.compressText), modified?: Unix seconds|null (the File Info modified date, and created date when there is none, a save to a file stamps; default now, recorded in the journal so a replay matches; null: leave the dates)} → {path, format, bytes, warnings, files?: [path…] (the file and its artboards' files), linked?: [path…] (images an SVG links to)}. Save writes one artboard, except a .ai file: a PDF-compatible file of every artboard carrying the native document (preserveEditing always on; PDF options flat or in options), which document.open restores exactly; separateArtboards writes more files, one per artboard. Without a path it writes the document's own file in its own format: a document opened from or saved as SVG/PDF saves as that again (warnings name what the format loses). No path known (never saved, converted from an older version, restored by Data Recovery, or another format) → {dataBase64, format, name, folder?, warnings} and the document stays modified",
+            "{path?, format?: vectorcraft|template|pdf|svg|svgz|ai (default: the path's extension, else the document's own format; unsaved native documents use defaultSaveFormat), options?: {…the format's options, see file.formatOptions; default: as last saved}, svg?: {…SVG options} (an SVG save keeps hidden layers, display:none, unless hiddenLayers is false), …the SVG and PDF options given flat instead, compress?: bool (native, also in options: gzip; default: the useCompression preference), version?: 4 (3, 2 or 1: for older VectorCraft versions; 1 and 2 are never compressed), preview?: false (embed a PNG of the first artboard, at most 256 px), separateArtboards?: false (native and .ai: also save each artboard of `range` to <name>-<artboard>.<ext> beside the file, holding that artboard and the art touching it; the result's files lists every file written), range?: \"1-3, 5\"|\"all\" (default; with separateArtboards), includeLinked?: false (keep linked files' own pixels, not just their previews; they stay linked), embedProfiles?: true (carry the ICC profiles loaded from files that the document is tagged with; opening the file installs them where missing), pdfCompatible?: false for native (also carry a PDF of every artboard) | true for .ai (false: blank pages, only the native document; a .ai file's compress, default true, is its compression.compressText), modified?: Unix seconds|null (the File Info modified date, and created date when there is none, a save to a file stamps; default now, recorded in the journal so a replay matches; null: leave the dates)} → {path, format, bytes, warnings, files?: [path…] (the file and its artboards' files), linked?: [path…] (images an SVG links to)}. Save writes one artboard, except a .ai file: a PDF-compatible file of every artboard carrying the native document (preserveEditing always on; PDF options flat or in options), which document.open restores exactly; separateArtboards writes more files, one per artboard. Without a path it writes the document's own file in its own format: a document opened from or saved as SVG/PDF saves as that again (warnings name what the format loses). No path known (never saved, converted from an older version, restored by Data Recovery, or another format) → {dataBase64, format, name, folder?, warnings} and the document stays modified",
             has_doc,
             |s, p| save(s, SaveMode::Save, p)
         ),
@@ -782,7 +790,7 @@ pub(super) fn specs() -> Vec<CommandSpec> {
             "Save As…",
             ["File"],
             Some("Cmd+Shift+S"),
-            "{…as document.save} {path?, format?: vectorcraft|template|pdf|svg|svgz|ai (default: the path's extension, else the document's own; ait, a .ait template, is written by file.saveAsTemplate), options?, svg?, modified?} the document takes on the new path, name and format (except a template, which is always a copy) → {path, format, bytes, warnings}; no path → {dataBase64, format, name, folder?, warnings}",
+            "{…as document.save} {path?, format?: vectorcraft|template|pdf|svg|svgz|ai (default: the path's extension, else the document's own; unsaved native documents use defaultSaveFormat; ait, a .ait template, is written by file.saveAsTemplate), options?, svg?, modified?} the document takes on the new path, name and format (except a template, which is always a copy) → {path, format, bytes, warnings}; no path → {dataBase64, format, name, folder?, warnings}",
             has_doc,
             |s, p| save(s, SaveMode::SaveAs, p)
         ),
@@ -827,11 +835,87 @@ pub(super) fn specs() -> Vec<CommandSpec> {
             "Format Options",
             [],
             None,
-            "{format?: a writable format id or ait (default: the document's own)} → {id, label, extensions, mime, read, write, raster, options: {name: {type, default, description, value}}, saveFormats: [{id, label, extensions}]}; value = the document's option as last saved in that format, else the default",
+            "{format?: a writable format id or ait (default: the document's own; unsaved native documents use defaultSaveFormat)} → {id, label, extensions, mime, read, write, raster, options: {name: {type, default, description, value}}, saveFormats: [{id, label, extensions}]}; value = the document's option as last saved in that format, else the default",
             always,
             format_options
         ),
     ]
+}
+
+#[cfg(test)]
+mod tests_default_save_format {
+    use super::*;
+
+    fn new_ai_session() -> Session {
+        let mut s = Session::new();
+        s.execute("prefs.set", &json!({"key": "defaultSaveFormat", "value": "ai"})).unwrap();
+        s.execute("file.new", &json!({"width": 120, "height": 80})).unwrap();
+        s
+    }
+
+    #[test]
+    fn preference_round_trips_and_rejects_unknown_formats() {
+        let mut s = new_ai_session();
+        let back: Prefs = serde_json::from_value(s.prefs.to_json()).unwrap();
+        assert_eq!(back.default_save_format, "ai");
+        for bad in [json!("png"), json!("unknown"), json!(false), json!(null)] {
+            assert!(s.execute("prefs.set", &json!({"key": "defaultSaveFormat", "value": bad})).is_err());
+            assert_eq!(s.prefs.default_save_format, "ai");
+        }
+        let old: Prefs = serde_json::from_value(json!({})).unwrap();
+        assert_eq!(old.default_save_format, "vectorcraft");
+        s.execute("prefs.reset", &json!({"category": "File Handling"})).unwrap();
+        assert_eq!(s.prefs.default_save_format, "vectorcraft");
+    }
+
+    #[test]
+    fn first_save_defaults_to_ai_and_explicit_choices_win() {
+        let mut s = new_ai_session();
+        for mode in [SaveMode::Save, SaveMode::SaveAs, SaveMode::Copy] {
+            let plan = save_plan(&s, mode, &json!({})).unwrap();
+            assert_eq!(plan.format.id, "ai");
+            assert!(plan.name.ends_with(".ai"));
+            assert!(plan.path.is_none());
+            assert_eq!(save_filters(plan.format.id)[0].1, &["ai"]);
+            assert_eq!(save_plan(&s, mode, &json!({"format": "vectorcraft"})).unwrap().format.id, "vectorcraft");
+            assert_eq!(save_plan(&s, mode, &json!({"path": "/tmp/art.svg"})).unwrap().format.id, "svg");
+        }
+        assert_eq!(s.execute("file.formatOptions", &json!({})).unwrap()["id"], "ai");
+        assert_eq!(save_plan(&s, SaveMode::Template, &json!({})).unwrap().format.id, "template");
+    }
+
+    #[test]
+    fn existing_documents_keep_their_format_and_save_path() {
+        let mut s = new_ai_session();
+        for id in ["vectorcraft", "pdf", "svg", "ai"] {
+            let path = format!("/tmp/art.{id}");
+            let st = s.doc_mut().unwrap();
+            st.path = Some(path.clone());
+            st.format = id;
+            let plan = save_plan(&s, SaveMode::Save, &json!({})).unwrap();
+            assert_eq!(plan.format.id, id);
+            assert_eq!(plan.path.as_deref(), Some(path.as_str()));
+            assert_eq!(save_plan(&s, SaveMode::SaveAs, &json!({})).unwrap().format.id, id);
+            assert_eq!(s.execute("file.formatOptions", &json!({})).unwrap()["id"], id);
+        }
+    }
+
+    #[test]
+    fn default_ai_contains_visible_pdf_and_restores_editable_art() {
+        let mut s = new_ai_session();
+        s.execute("shape.rectangle", &json!({"x": 10, "y": 10, "width": 60, "height": 30})).unwrap();
+        let result = s.execute("document.save", &json!({})).unwrap();
+        assert_eq!(result["format"], "ai");
+        assert!(result["name"].as_str().unwrap().ends_with(".ai"));
+        let bytes = vectorcraft_format::base64_decode(result["dataBase64"].as_str().unwrap()).unwrap();
+        assert!(bytes.starts_with(b"%PDF"));
+        assert!(vectorcraft_pdf::editing(&bytes).is_some_and(|e| e.intact));
+        let loaded = load("art.ai", &bytes).unwrap();
+        assert!(loaded.restored);
+        assert_eq!(loaded.doc.layers, s.doc().unwrap().doc.layers);
+        assert_eq!(loaded.doc.artboards, s.doc().unwrap().doc.artboards);
+        assert!(result["warnings"].as_array().unwrap().is_empty());
+    }
 }
 
 #[cfg(test)]

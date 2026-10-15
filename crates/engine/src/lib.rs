@@ -1104,6 +1104,8 @@ pub struct Prefs {
     /// File Handling → Use Compression: native saves are gzip-compressed (`document.save
     /// {compress}` overrides it).
     pub use_compression: bool,
+    /// Format suggested for documents that have no saved file yet. Existing files keep theirs.
+    pub default_save_format: String,
     /// Save for Web: the user's presets (the built-in ones aren't stored). A local library, not a
     /// Preferences dialog field: resetting the preferences keeps it; `webExport.presets.*` edit it.
     #[serde(skip_serializing_if = "Vec::is_empty")]
@@ -1288,6 +1290,7 @@ impl Default for Prefs {
             templates_folder: String::new(),
             append_converted: true,
             use_compression: false,
+            default_save_format: s("vectorcraft"),
             web_export_presets: vec![],
             web_export_settings: None,
             print_presets: vec![],

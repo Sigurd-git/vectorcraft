@@ -3382,6 +3382,9 @@ effect	Points	Punkte
 	Use Artboards	Zeichenflächen verwenden
 	Use Black Point Compensation	Tiefenkompensierung verwenden
 	Use Compression	Komprimierung verwenden
+	Default Save Format	Standardformat beim Speichern
+	VectorCraft (.vectorcraft)	VectorCraft (.vectorcraft)
+	PDF-compatible .ai	PDF-kompatibles .ai
 	Use document bleed settings	Anschnitteinstellungen des Dokuments verwenden
 	Use Even-Odd Fill Rule	Gerade-Ungerade-Füllregel verwenden
 	Use Japanese Crop Marks	Japanische Schnittmarken verwenden

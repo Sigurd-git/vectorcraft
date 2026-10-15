@@ -3460,6 +3460,9 @@ mark-style	Japanese	Японский
 	Use Artboards	Использовать монтажные области
 	Use Black Point Compensation	Использовать компенсацию чёрной точки
 	Use Compression	Использовать сжатие
+	Default Save Format	Формат сохранения по умолчанию
+	VectorCraft (.vectorcraft)	VectorCraft (.vectorcraft)
+	PDF-compatible .ai	.ai, совместимый с PDF
 	Use document bleed settings	Использовать параметры вылета документа
 	Use Even-Odd Fill Rule	Использовать правило заливки «чёт-нечет»
 	Use Japanese Crop Marks	Использовать японские метки обрезки

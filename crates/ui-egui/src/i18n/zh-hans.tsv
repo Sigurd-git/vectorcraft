@@ -3303,6 +3303,9 @@ font-script	Japanese	汉字
 	Use Artboards	使用画板
 	Use Black Point Compensation	使用黑场补偿
 	Use Compression	使用压缩
+	Default Save Format	默认保存格式
+	VectorCraft (.vectorcraft)	VectorCraft (.vectorcraft)
+	PDF-compatible .ai	兼容 PDF 的 .ai
 	Use document bleed settings	使用文档的出血设置
 	Use Even-Odd Fill Rule	使用奇偶填色规则
 	Use Japanese Crop Marks	使用日式裁切标记

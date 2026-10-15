@@ -3457,6 +3457,9 @@ effect	Points	Точки
 	Use Artboards	Використовувати монтажні області
 	Use Black Point Compensation	Використовувати компенсацію чорної точки
 	Use Compression	Використовувати стиск
+	Default Save Format	Типовий формат збереження
+	VectorCraft (.vectorcraft)	VectorCraft (.vectorcraft)
+	PDF-compatible .ai	.ai, сумісний із PDF
 	Use document bleed settings	Використовувати параметри вильоту документа
 	Use Even-Odd Fill Rule	Використовувати правило заливки «парне–непарне»
 	Use Japanese Crop Marks	Використовувати японські мітки обрізання

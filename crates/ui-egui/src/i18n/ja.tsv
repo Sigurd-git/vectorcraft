@@ -3113,6 +3113,9 @@ mark-style	Japanese	日本式
 	Use Artboards	アートボードを使用
 	Use Black Point Compensation	ブラックポイントの補正を使用
 	Use Compression	圧縮を使用
+	Default Save Format	既定の保存形式
+	VectorCraft (.vectorcraft)	VectorCraft (.vectorcraft)
+	PDF-compatible .ai	PDF 互換の .ai
 	Use Even-Odd Fill Rule	奇偶規則を使用
 	Use Japanese Crop Marks	日本式トンボを使用
 	Use Low Resolution Proxy for Linked EPS	リンク EPS に低解像度プロキシを使用

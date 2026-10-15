@@ -530,6 +530,15 @@ come back without a path), `file.newFromTemplate {path}`, `file.revert` and `fil
 with the values a save would use). Without a path the save commands return `{dataBase64, name, folder?, warnings}`. A document saved as SVG or PDF
 remembers its options, so the next save reuses them. A PDF opened with `pages`, `cropTo` or `password` is only part
 of the file, so Save asks for a new name instead of writing it back.
+
+For a new, unsaved native document, `prefs.set {key: "defaultSaveFormat", value: "ai"}`
+makes Save, Save As, Save a Copy and `file.formatOptions {}` suggest a PDF-compatible `.ai`.
+It carries VectorCraft's native editing data for an editable round trip. Existing saved files keep
+their own format; an explicit `format` or a recognized path extension takes precedence. The
+preference also appears under File Handling → Default Save Format. Its default is `vectorcraft`,
+including when older preferences are loaded or File Handling is reset. Headless MCP sessions set
+their own preference; use an explicit `.ai` path with `save_file` for the first save.
+
 `file.documentColorMode {mode, convert?, intent?, grays?}` switches the document colour mode, converting the colours of
 the art, symbols, pattern tiles and swatches through the colour settings (`object.convertDocumentColorMode` is an
 alias kept for older scripts). Gray colours stay Gray and print on the black plate only. RGB greys are colours like any

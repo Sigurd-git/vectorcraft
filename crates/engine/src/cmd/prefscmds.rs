@@ -362,6 +362,13 @@ pub const PREF_SPECS: &[PrefSpec] = &[
     p!("appendConverted", "File Handling", "Files", "Mark Older Files as [Converted] When Opened", bool),
     // Native saves (`document.save {compress}`)
     p!("useCompression", "File Handling", "Files", "Use Compression", bool),
+    p!(
+        "defaultSaveFormat",
+        "File Handling",
+        "Files",
+        "Default Save Format",
+        choice(&[("vectorcraft", "VectorCraft (.vectorcraft)"), ("ai", "PDF-compatible .ai")])
+    ),
     // The W/H link of the Transform panel, the Properties panel and the Control bar
     p!("constrainProportions", "General", "Transform Panel", "Constrain Width and Height Proportions", bool),
     p!("singleCornerRadius", "General", "Transform Panel", "Single Corner Radius", bool),
