@@ -1,6 +1,6 @@
 # File format parity
 
-> **Last reviewed:** 2026-10-10 · **Last updated:** 2026-11-05 · **Change:** minor (PDF import: DeviceN gradients of a spot ink over process plates, #3235) · **Target:** Adobe Illustrator 2026 (30.x)
+> **Last reviewed:** 2026-10-10 · **Last updated:** 2026-11-05 · **Change:** minor (configurable first-save format (`defaultSaveFormat`); PDF import: DeviceN gradients of a spot ink over process plates, #3235) · **Target:** Adobe Illustrator 2026 (30.x)
 
 Every format Illustrator opens, places, saves or exports, against VectorCraft's format table (`FORMATS`,
 `OPEN_EXTS`, `PLACE_EXTS` in `crates/engine/src/cmd/fileio/formats.rs`). Illustrator's list comes from its public
@@ -133,6 +133,13 @@ the app's own editing copy of a file (an EPS after its `%%EOF`, a `.ai`'s `AIPri
 
 ## Format by format
 
+The fork's File Handling → Default Save Format preference can suggest `.ai` for an unsaved
+native document, including through MCP. Saved documents retain their format and explicit save
+choices take precedence. The `.ai` still contains a PDF and VectorCraft's native editing data;
+this preference does not change the exchange limitations above. Engine tests in
+`cmd/fileio/save.rs::tests_default_save_format` cover preference migration/reset, save planning,
+explicit overrides, existing paths and an editable `.ai` round trip. Scores and estimates are unchanged.
+
 | Format | Illustrator | Ours: open/place | Ours: save/export | Fidelity and tests |
 |---|---|---|---|---|
 | VectorCraft `.vectorcraft` / `.vctemplate` | — | yes | yes | lossless JSON, versioned, save down to v1; property-tested round trips (`format/tests/prop_format.rs`); documents with a lot of path data are written as compact JSON, about a fifth of the size (#1492); a save falls back to a plain fsync and to writing elsewhere and copying in when the folder refuses the usual steps (#1625, #1649, part of #1620; not confirmed on a real network share); the size limits on embedded data also apply to files read from memory (#1783), and saving over a private file on Unix leaves no readable temporary copy beside it (#1778); a dynamic symbol's type (`dynamic` on the symbol) and an instance's appearance changes to its art (`symbol_overrides`, each path at most 64 deep, counted against the object budget) are written only when set, so documents without them save as before (#4938) |
@@ -238,6 +245,7 @@ the app's own editing copy of a file (an EPS after its `%%EOF`, a `.ai`'s `AIPri
 | 2026-10-16 | minor | Batch exporting in Export for Screens (#1935): a file name pattern (document and item names, a counter, the date), folders per format, item or both, Layers and Selection tabs with thumbnails, EPS, AI and VectorCraft rows, a PDF row with printer's marks, and export presets (built-in Logo Package and Print-Ready PDF, saved ones); scores and hours unchanged (estimated) |
 | 2026-10-16 | minor | `.ai` editing data: a rotated embedded image lands where its raster matrix puts it, not turned 180° around its corner; the legacy version 7 writer and its prolog write and draw rotated images with the same matrix (#2269). Scores unchanged |
 | 2026-10-14 | minor | Legacy `.ai` of version 7 runs as a PostScript program: its prolog is a procedure set of VectorCraft's own that gives each operator the writer uses its meaning (paths, colours, compound paths, clipping groups, layers that don't print, images; gradients flat, type not set), and the page trailer's `annotatepage` (§3 of the specification) marks nothing; every file the writer's tests write is run through VectorCraft's PostScript reader and must draw what the document it was written from draws (#868) |
+| 2026-10-15 | minor | Fork M4.AI: choose the first save format with `defaultSaveFormat`; saved-file formats and explicit choices retain precedence; editable `.ai` round-trip regressions; scores and estimates unchanged. |
 | 2026-10-14 | minor | SVG import: `:not()` selectors (#1799, #1557), stacked descendant selectors over deep nesting no longer stall (#1834, #1703), linked files within the automation roots again (#1870); DXF export writes the VPORT view direction once (#1789); nesting capped at 32 objects with self-using symbols and patterns opened without the offending instance (#1852); deep and self-referencing PDF and `.ai` data (#1871), decompression bombs (#1873), self-drawing brushes (#1872), hostile EPS, Affinity and native data (#1863) and huge ids (#1862) handled; a failed save is reported in a dialog and the old file is kept (#1865, #1685, #1693, #1694); type inside symbols gets its layout bounds back on opening a native file (#1833, #1738). Scores unchanged (estimated) |
 | 2026-10-13 | minor | Pinned PngSuite HTTPS files verified by SHA-256 before publication; bounded downloads replace archive extraction (#1729). Scores and hours unchanged. |
 | 2026-10-14 | minor | EPS import: a stitched shading keeps its hard colour changes (#1654, #1653); WMF/EMF import refuses an oversized embedded PNG or JPEG from its header, before any pixels are decoded (#1776); PDF open no longer takes exponential time on a crafted name tree with shared nodes when it looks for the editing data (#1781); The size limits on a native file's embedded data also apply to files read from memory, not only streamed ones (#1783); Saving over a private file on Unix no longer leaves a readable temporary copy beside it while the file is written (#1778); An Export for Screens suffix can no longer place files outside the export folder (#1777); Package refuses a folder where it would overwrite the open document or one of its linked files (#1786); ruzstd 0.9.1 fixes a decompression bomb (RUSTSEC-2026-0344) reachable from EPS/`.ai` and Affinity import (#1807); File Info dates are stamped only after a save succeeds, so a failed save no longer changes them (#1774); Linked files that change during a drag are updated after the drag instead of being missed (#1773); scores unchanged |

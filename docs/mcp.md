@@ -633,6 +633,15 @@ with the values a save would use). Without a path the save commands return `{dat
 remembers its options, so the next save reuses them; a document not yet saved as a native file is offered the
 VectorCraft Options the last native Save or Save As used (not its artboards, nor Use Compression). A PDF opened with `pages`, `cropTo` or `password` is only part
 of the file, so Save asks for a new name instead of writing it back.
+
+For a new, unsaved native document, `prefs.set {key: "defaultSaveFormat", value: "ai"}`
+makes Save, Save As, Save a Copy and `file.formatOptions {}` suggest a PDF-compatible `.ai`.
+It carries VectorCraft's native editing data for an editable round trip. Existing saved files keep
+their own format; an explicit `format` or a recognized path extension takes precedence. The
+preference also appears under File Handling → Default Save Format. Its default is `vectorcraft`,
+including when older preferences are loaded or File Handling is reset. Headless MCP sessions set
+their own preference; use an explicit `.ai` path with `save_file` for the first save.
+
 `file.documentColorMode {mode, convert?, intent?, grays?}` switches the document color mode, converting the colors of
 the art (opacity masks, effect colors and the series paints and label styles that graphs keep included), symbols,
 graph designs, pattern tiles (with the tile that pattern editing's Cancel puts back), graphic styles (their effect

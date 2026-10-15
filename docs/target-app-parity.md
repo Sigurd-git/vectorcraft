@@ -1,6 +1,6 @@
 # Parity with Adobe Illustrator
 
-> **Last reviewed:** 2026-10-10 · **Last updated:** 2026-11-05 · **Change:** minor (Selection Tools add-on: Select by Link Status selects images and placed documents that are linked, embedded, missing or modified, #5526; scores and estimates unchanged) · **Target:** Adobe Illustrator 2026 (30.x; public release notes through 30.7, August 2026)
+> **Last reviewed:** 2026-10-10 · **Last updated:** 2026-11-05 · **Change:** minor (configurable first-save format (`defaultSaveFormat`); Selection Tools add-on: Select by Link Status selects images and placed documents that are linked, embedded, missing or modified, #5526; scores and estimates unchanged) · **Target:** Adobe Illustrator 2026 (30.x; public release notes through 30.7, August 2026)
 
 ## Feature submission evidence
 
@@ -398,6 +398,12 @@ its `pixel::tests_paint::*` tests and `tests_rasterfilters`. Measured Photoshop 
 (`crates/effects/src/pixel/sketch_ink.rs`, `pixel::tests_sketch::*`). Measured Photoshop filter count 37/57; depth unchanged.
 
 ## Detailed missing items per area (2026-10-05 table, still current unless the area table above says otherwise)
+
+Fork extension, M4.AI: File Handling → Default Save Format selects the first save's `.vectorcraft`
+or PDF-compatible `.ai` format. Existing files and explicit choices retain precedence. Evidence:
+`crates/engine/src/cmd/fileio/save.rs::tests_default_save_format` (migration/reset, save modes,
+existing paths and native-data round trip). File-format and UI-chrome scores, missing items and
+remaining hours are unchanged; this adds a preference without extending `.ai` exchange fidelity.
 
 > **Duplicated rows (2026-10-14):** this table lists "Selection, transform & align tools" three times and "Drawing tools"
 > twice, each time with different text, as merges that each edited the table left them. Which text is current needs the
@@ -1886,6 +1892,7 @@ Edit › Copy and Cut put the selected ruler guides on the clipboard, with the s
 | 2026-10-14 | minor | Image Trace: tiny fitted contours retain islands and holes; generated Corners/Noise regressions; scores and estimates unchanged |
 | 2026-10-14 | minor | Quick Image Trace presets reveal the adjustment panel with Advanced open; Properties reopens it. Sliders keep their preset row until release so the re-trace is committed. UI regressions added; scores and remaining estimates unchanged. |
 | 2026-10-14 | minor | Revolve: automatic smooth vector shading, default-on Cap with continuous curved rims, and bounded seam joins; angular cut sides remain open. Scores and hour estimates unchanged at this rounding |
+| 2026-10-15 | minor | Fork M4.AI: choose the first save format with `defaultSaveFormat`; saved-file formats and explicit choices retain precedence; editable `.ai` round-trip regressions; scores and estimates unchanged. |
 | 2026-10-14 | minor | Evidence for the later merges of 2026-10-14 that did not write their own: anchor X/Y/W/H (#1839), Snap to Grid over Snap to Pixel (#1840), guides in a marquee (#1836), the toolbar and All Tools drawer (#1751), the Actions panel selection (#1853), redo during a drag (#1856), preferences written on OK (#1857), character styles from a selected range (#1634), type in symbols after reopening (#1833), swatches in opacity masks (#1830), macOS save sheets (#1855, the Format menu withdrawn), shared stroke outlines (#1667), SVG and DXF fixes (#1799, #1834, #1870, #1789), untrusted files (#1852, #1862, #1863, #1871–#1873), failed saves (#1865), effects and Dim Images (#1864), krilla (#1874) and the wasm gate (#1875). #1630, #1631, #1632, #1633, #1682, #1687–#1690, #1744, #1750, #1755, #1767, #1782, #1784, #1792, #1809, #1814 and #1850 wrote their own evidence and are not repeated. A note above the 2026-10-05 table says its duplicated "Selection, transform & align tools" and "Drawing tools" rows need the owner's judgement. Scores and hours unchanged (estimated) |
 | 2026-10-14 | minor | Local Image Trace Noise change: increasing-area whole-region merges preserve nested region partitions across thresholds, checked independently on 64 synthetic grids. See `image-trace-quality.md`; score and hours unchanged. |
 | 2026-10-14 | minor | Image Trace: closed outlines keep their interior when straightening would collapse them; generated mark/hole/winding/Noise regressions; score and hours unchanged |
