@@ -1714,6 +1714,19 @@ fn saved_ai() -> Vec<u8> {
     .clone()
 }
 
+#[test]
+fn ai_with_a_malformed_embedded_file_name_is_refused() {
+    let mut bytes = saved_ai();
+    let name = b"application#2Fjson";
+    let at = bytes.windows(name.len()).position(|window| window == name).unwrap();
+    bytes[at + b"application#".len()] = b'-';
+    let xref = bytes.windows(6).rposition(|window| window == b"\nxref\n").unwrap();
+    for data in [&bytes[..], &bytes[..xref]] {
+        let error = vectorcraft_engine::cmd::fileio::load("saved.ai", data).err().expect("the malformed name must be refused");
+        assert!(error.to_string().contains("dictionary value"), "{error}");
+    }
+}
+
 proptest! {
     #![proptest_config(config())]
 

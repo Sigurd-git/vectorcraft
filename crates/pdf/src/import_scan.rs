@@ -613,7 +613,9 @@ impl Walker<'_, '_> {
     }
 
     fn note_fonts(&mut self, res: &Resources<'_>) {
-        for key in res.fonts.keys() {
+        let mut keys = res.fonts.keys().collect::<Vec<_>>();
+        keys.sort_by(|a, b| a.as_ref().cmp(b.as_ref()));
+        for key in keys {
             if let Some(f) = res.fonts.get::<Dict<'_>>(key.as_ref())
                 && let Some(name) = f.get::<Name<'_>>(b"BaseFont")
             {
