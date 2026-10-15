@@ -43,6 +43,27 @@ fn page(resources: &str, content: &[u8], extra: &[Vec<u8>]) -> Vec<u8> {
     assemble(&objects)
 }
 
+#[test]
+fn malformed_dictionary_values_are_refused_before_import() {
+    let content = b"0 1 0 rg 10 10 20 20 re f";
+    let malformed = "/Subtype /application#-Fjson";
+    for bytes in [page(&format!("/Unknown << {malformed} >>"), content, &[]), page("", content, &[stream(malformed, b"original synthetic data")])] {
+        assert!(matches!(crate::info(&bytes, None), Err(crate::PdfError::Parse(message)) if message.contains("dictionary value")));
+        assert!(matches!(crate::import(&bytes), Err(crate::PdfError::Parse(message)) if message.contains("dictionary value")));
+    }
+}
+
+#[test]
+fn valid_escaped_names_in_dictionary_values_remain_readable() {
+    let bytes = page(
+        "/Unknown << /Subtype /application#2Fjson >>",
+        b"0 1 0 rg 10 10 20 20 re f",
+        &[stream("/Subtype /application#2Fjson", b"original synthetic data")],
+    );
+    assert_eq!(crate::info(&bytes, None).unwrap().pages.len(), 1);
+    assert_eq!(crate::import(&bytes).unwrap().artboards.len(), 1);
+}
+
 pub(crate) fn resource_scope_cases() -> Vec<(&'static str, Vec<u8>, bool)> {
     [
         ("absent", "", true),

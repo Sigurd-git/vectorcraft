@@ -10,7 +10,7 @@ use craft_pdf::syntax::{DecryptionError, LoadPdfError, Pdf};
 use kurbo::{Affine, Rect};
 use vectorcraft_doc::setup::MAX_BLEED;
 
-use crate::import_color::{direct, items, readable, values};
+use crate::import_color::{direct, items, readable};
 use crate::{Choice, CropTo, ImportOptions, PdfError};
 
 /// What `info` tells about one page.
@@ -125,11 +125,14 @@ const NESTED_NOTE: &str = "its functions or colour spaces are built on one anoth
 /// The error of a file with an array whose items can't all be read (a damaged file).
 const UNREADABLE_NOTE: &str = "an array in it is damaged and can't be read";
 
+/// The reader indexed a key whose value cannot be read (for example, a damaged name escape).
+const DICTIONARY_NOTE: &str = "a dictionary value in it can't be read";
+
 /// Why `pdf` is refused, if it is: a stream the reader would fail on ([`STREAM_NOTE`]), or
-/// functions, color spaces or calculator procedures nested too deep ([`NESTED_NOTE`]). Every
-/// object is looked at, and every array, dictionary and stream written inside one, wherever it
-/// is used from: the interpreter builds functions and color spaces from resources, shadings,
-/// images, patterns, masks and graphics states alike.
+/// unreadable arrays or dictionary values, or functions, color spaces or calculator procedures
+/// nested too deep ([`NESTED_NOTE`]). Every object is looked at, and every array, dictionary and
+/// stream written inside one, wherever it is used from: the interpreter builds functions and
+/// color spaces from resources, shadings, images, patterns, masks and graphics states alike.
 fn hostile(pdf: &Pdf) -> Option<&'static str> {
     let xref = pdf.xref();
     let mut known = HashMap::new();
@@ -148,7 +151,18 @@ fn hostile(pdf: &Pdf) -> Option<&'static str> {
             // interpreter would still read its leading items: the file is refused.
             Object::Array(a) if !readable(a) => return Some(UNREADABLE_NOTE),
             Object::Array(a) => pending.extend(items(a).filter_map(direct)),
-            _ => pending.extend(dict_or_stream(&o).into_iter().flat_map(|(d, _)| values(d)).filter_map(direct)),
+            _ => {
+                if let Some((dict, _)) = dict_or_stream(&o) {
+                    for key in dict.keys() {
+                        // `entries()` assumes every indexed value can be read and unwraps it.
+                        // Damaged name escapes can violate that assumption; refuse them here.
+                        let Some(value) = dict.get_raw::<Object<'_>>(key.as_ref()) else {
+                            return Some(DICTIONARY_NOTE);
+                        };
+                        pending.extend(direct(value));
+                    }
+                }
+            }
         }
     }
     None
