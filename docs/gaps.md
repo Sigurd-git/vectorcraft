@@ -1,6 +1,6 @@
 # Gaps
 
-> **Last reviewed:** 2026-10-10 · **Last updated:** 2026-11-05 · **Change:** minor (Compound Shapes add-on, beyond Illustrator; scores and estimates unchanged; Contour add-on, beyond Illustrator; scores and estimates unchanged; a slow first frame is waited for instead of restarting without the graphics adapter, and the menu bar no longer waits for the installed fonts' scan; scores and estimates unchanged) · **Target:** Adobe Illustrator 2026 (30.x)
+> **Last reviewed:** 2026-10-10 · **Last updated:** 2026-11-05 · **Change:** minor (M4.AI2: malformed PDF dictionary values are refused before import; deterministic PDF and editable AI regressions; Compound Shapes add-on, beyond Illustrator; scores and estimates unchanged; Contour add-on, beyond Illustrator; scores and estimates unchanged; a slow first frame is waited for instead of restarting without the graphics adapter, and the menu bar no longer waits for the installed fonts' scan; scores and estimates unchanged) · **Target:** Adobe Illustrator 2026 (30.x)
 
 ## Feature submission evidence
 
@@ -207,6 +207,8 @@ from G14 and the budget run of G15: **~170–270 h** one agent, ~50–80 h wall 
 - **Estimate:** 20–35 h, needs reporters' help on hardware we don't have.
 
 ## G8 Hardening at scale
+
+- **Done (fork M4.AI2):** PDF preflight refuses unreadable dictionary values through fallible lookups. Deterministic original-file regressions cover invalid and valid escaped names, stream dictionaries and saved `.ai` files with and without their xref table; broader corpus and platform QA remain open.
 
 - **Done:** PngSuite fetching verifies 175 original PNGs and redistribution notices against a pinned SHA-256/size manifest before publishing; file and total-size budgets, cache verification and no archive extraction (#1729). The real-world corpus and manual QA gaps below remain.
 
@@ -881,6 +883,7 @@ trap, and the defaults (0.25 pt, 100%, 40%) are VectorCraft's own, the pages giv
 | 2026-10-15 | minor | G11: Transform Each Reflect X flips left-right and Reflect Y top-bottom (#1910). Estimates unchanged. |
 | 2026-10-14 | minor | Quick Image Trace presets reveal the adjustment panel with Advanced open; Properties reopens it. Sliders keep their preset row until release so the re-trace is committed. UI regressions added; scores and remaining estimates unchanged. |
 | 2026-10-14 | minor | Revolve: automatic smooth vector shading, default-on Cap with continuous curved rims, and bounded seam joins; angular cut sides remain open. Scores and hour estimates unchanged at this rounding |
+| 2026-10-15 | minor | M4.AI2: malformed PDF dictionary values are refused before import; deterministic PDF and editable AI regressions; scores and estimates unchanged. |
 | 2026-10-14 | minor | No entry closed. G8 and G11 record the later merges of 2026-10-14 (#1852, #1862–#1865, #1871–#1873, #1839, #1840, #1856); #1683 (Dim Images) and #1685 (failed-save dialog) are done by #1864 and #1865. Gaps noted for reporters: G1 Effect › Warp through Warp Options (#1760), Color Picker Tab order (#1692), aligning to a key anchor (#1636; the public Align page does not say how the key anchor is chosen); G7 custom toolbars (#1759), workspace panel widths (#1753); G11 Shape Builder regions between closed shapes (#1691), deleting an interior anchor of an open path; G13 Intertwine (#1763), gradient mesh from an embedded image (#1676), Image Trace radial gradients (draft #1849). Average and Join with a corner or smooth choice was already listed (G1). G12: a line two merges had left twice is there once, without Appearance of Black for output, which acts since #1750. Estimates unchanged |
 | 2026-10-14 | minor | Existing-guide Escape cancellation: eight app-input regressions, the Direct Selection Escape control and current full CI passed; scores and hours unchanged. |
 | 2026-10-15 | minor | Artboard tool: closing a clean active tab restores the displayed board before Properties Delete. Nine targeted checks passed; three original close-route captures reviewed; scores and hours unchanged. |
