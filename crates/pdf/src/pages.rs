@@ -1,7 +1,7 @@
 //! The pages of a PDF to import: opening with a password, the pages picked, the box each page
 //! is cropped to ([`CropTo`]) and [`info`].
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use craft_pdf::syntax::object::{Array, Dict, MaybeRef, Name, Object, ObjectIdentifier, Stream, dict_or_stream};
 use craft_pdf::syntax::page::Page;
@@ -128,6 +128,65 @@ const UNREADABLE_NOTE: &str = "an array in it is damaged and can't be read";
 /// The reader indexed a key whose value cannot be read (for example, a damaged name escape).
 const DICTIONARY_NOTE: &str = "a dictionary value in it can't be read";
 
+type DictLocation = (usize, usize);
+
+/// A dictionary's location in this immutable PDF, not its contents: identical dictionaries in
+/// different places need not have the same import policy.
+fn dict_location(dict: &Dict<'_>) -> DictLocation {
+    (dict.data().as_ptr() as usize, dict.data().len())
+}
+
+#[derive(Default)]
+struct PageResourceMaps {
+    owners: HashSet<DictLocation>,
+    scopes: HashSet<DictLocation>,
+    maps: HashSet<DictLocation>,
+}
+
+/// Only the font/colour maps actually selected for a page qualify for partial recovery. Other
+/// resource scopes retain the fork's stricter refusal policy. Resolve as `Object` so a stream
+/// can't masquerade as a dictionary, and check the reader's selected maps before accepting an
+/// inherited scope (a damaged Parent chain need not match the page tree the reader followed).
+fn page_resource_maps(pdf: &Pdf) -> PageResourceMaps {
+    let mut found = PageResourceMaps::default();
+    for page in pdf.pages().iter() {
+        let mut owner = Some(page.raw().clone());
+        let mut seen = HashSet::new();
+        // Beyond this bounded ancestry search, retain strict refusal rather than recover.
+        for _ in 0..64 {
+            let Some(dict) = owner.take() else { break };
+            if !seen.insert(dict_location(&dict)) {
+                break;
+            }
+            if let Some(Object::Dict(resources)) = dict.get::<Object<'_>>(b"Resources") {
+                for (key, selected) in [(&b"Font"[..], &page.resources().fonts), (&b"ColorSpace"[..], &page.resources().color_spaces)] {
+                    if let Some(Object::Dict(map)) = resources.get::<Object<'_>>(key)
+                        && dict_location(&map) == dict_location(selected)
+                    {
+                        found.owners.insert(dict_location(&dict));
+                        found.scopes.insert(dict_location(&resources));
+                        found.maps.insert(dict_location(&map));
+                    }
+                }
+                break;
+            }
+            owner = match dict.get::<Object<'_>>(b"Parent") {
+                Some(Object::Dict(parent)) => Some(parent),
+                _ => None,
+            };
+        }
+    }
+    found
+}
+
+fn referenced_dict<'a>(value: &MaybeRef<Object<'a>>, xref: &'a XRef) -> Option<DictLocation> {
+    let object = match value {
+        MaybeRef::NotRef(object) => object.clone(),
+        MaybeRef::Ref(reference) => xref.get::<Object<'a>>((*reference).into())?,
+    };
+    dict_or_stream(&object).map(|(dict, _)| dict_location(dict))
+}
+
 /// Why `pdf` is refused, if it is: a stream the reader would fail on ([`STREAM_NOTE`]), or
 /// unreadable arrays or dictionary values, or functions, color spaces or calculator procedures
 /// nested too deep ([`NESTED_NOTE`]). Every object is looked at, and every array, dictionary and
@@ -136,6 +195,32 @@ const DICTIONARY_NOTE: &str = "a dictionary value in it can't be read";
 fn hostile(pdf: &Pdf) -> Option<&'static str> {
     let xref = pdf.xref();
     let mut known = HashMap::new();
+    let mut unreadable_dicts = HashSet::new();
+    let resources = page_resource_maps(pdf);
+    let mut strict_uses = HashSet::new();
+    let mut referenced_dicts = HashSet::new();
+    // The catalog is reached through the trailer, outside the object walk below.
+    if let Some(root) = xref.get::<Dict<'_>>(xref.root_id()) {
+        referenced_dicts.insert(dict_location(&root));
+        strict_uses.insert(dict_location(&root));
+    }
+    for page in pdf.pages().iter() {
+        referenced_dicts.insert(dict_location(page.raw()));
+        strict_uses.insert(dict_location(page.raw()));
+    }
+    let trailer_known = crate::encrypt::trailer_references(pdf.data().as_ref()).is_some_and(|references| {
+        let root = xref.root_id();
+        if references.first().is_some_and(|reference| *reference != root) {
+            return false;
+        }
+        for reference in references {
+            if let Some(dict) = xref.get::<Dict<'_>>(reference) {
+                referenced_dicts.insert(dict_location(&dict));
+                strict_uses.insert(dict_location(&dict));
+            }
+        }
+        true
+    });
     // The objects of the file, then what each holds directly (64 deep at most: the reader's cap).
     let mut pending: Vec<Object<'_>> = pdf.objects().into_iter().collect();
     while let Some(o) = pending.pop() {
@@ -150,22 +235,55 @@ fn hostile(pdf: &Pdf) -> Option<&'static str> {
             // An array with an item that can't be read can't be looked at whole, and the
             // interpreter would still read its leading items: the file is refused.
             Object::Array(a) if !readable(a) => return Some(UNREADABLE_NOTE),
-            Object::Array(a) => pending.extend(items(a).filter_map(direct)),
+            Object::Array(a) => {
+                for value in items(a) {
+                    if let Some(child) = referenced_dict(&value, xref) {
+                        referenced_dicts.insert(child);
+                        if resources.maps.contains(&child) || resources.scopes.contains(&child) {
+                            strict_uses.insert(child);
+                        }
+                    }
+                    pending.extend(direct(value));
+                }
+            }
             _ => {
                 if let Some((dict, _)) = dict_or_stream(&o) {
+                    let parent = dict_location(dict);
                     for key in dict.keys() {
                         // `entries()` assumes every indexed value can be read and unwraps it.
-                        // Damaged name escapes can violate that assumption; refuse them here.
+                        // Check every value without that assumption. Other uses of a resource
+                        // map may be found later in this walk, so decide refusal at the end.
                         let Some(value) = dict.get_raw::<Object<'_>>(key.as_ref()) else {
-                            return Some(DICTIONARY_NOTE);
+                            if matches!(&o, Object::Stream(_)) {
+                                return Some(DICTIONARY_NOTE);
+                            }
+                            unreadable_dicts.insert(parent);
+                            continue;
                         };
+                        if let Some(child) = referenced_dict(&value, xref) {
+                            referenced_dicts.insert(child);
+                            let resource_edge =
+                                resources.owners.contains(&parent) && key.as_ref() == b"Resources" && resources.scopes.contains(&child);
+                            let map_edge = resources.scopes.contains(&parent)
+                                && matches!(key.as_ref(), b"Font" | b"ColorSpace")
+                                && resources.maps.contains(&child);
+                            if !resource_edge && !map_edge && (resources.maps.contains(&child) || resources.scopes.contains(&child)) {
+                                strict_uses.insert(child);
+                            }
+                        }
                         pending.extend(direct(value));
                     }
                 }
             }
         }
     }
-    None
+    let aliased_scope = resources.scopes.iter().any(|key| strict_uses.contains(key));
+    // Standalone, unreferenced dictionary objects aren't consumed by import. Keep walking
+    // their readable values above so they cannot hide a hostile function, array or stream.
+    unreadable_dicts
+        .iter()
+        .any(|key| !trailer_known || referenced_dicts.contains(key) && (!resources.maps.contains(key) || strict_uses.contains(key) || aliased_scope))
+        .then_some(DICTIONARY_NOTE)
 }
 
 /// Read a PDF, decrypting it with `password` (none: the empty user password). The permissions
