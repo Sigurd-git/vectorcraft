@@ -64,6 +64,119 @@ fn valid_escaped_names_in_dictionary_values_remain_readable() {
     assert_eq!(crate::import(&bytes).unwrap().artboards.len(), 1);
 }
 
+#[test]
+fn unreadable_resource_entries_preserve_the_remaining_art() {
+    let content = b"/CS0 cs 0 1 0 scn 10 10 20 20 re f BT /F1 12 Tf 10 40 Td (Hi) Tj ET";
+    for damaged in ["/#zz", "12-.5"] {
+        let fonts = format!("<< /Unused {damaged} /F1 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> >>");
+        let spaces = format!("<< /Unused {damaged} /CS0 /DeviceRGB >>");
+        for bytes in [
+            page(&format!("/Font {fonts} /ColorSpace {spaces}"), content, &[]),
+            page("/Font 5 0 R /ColorSpace 6 0 R", content, &[fonts.clone().into_bytes(), spaces.clone().into_bytes()]),
+            assemble(&[
+                b"<< /Type /Catalog /Pages 2 0 R >>".to_vec(),
+                b"<< /Type /Pages /Count 1 /Kids [3 0 R] /Resources << /Font 5 0 R /ColorSpace 6 0 R >> >>".to_vec(),
+                b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 100 60] /Contents 4 0 R >>".to_vec(),
+                stream("", content),
+                fonts.into_bytes(),
+                spaces.into_bytes(),
+            ]),
+        ] {
+            let xref = bytes.windows(6).rposition(|window| window == b"\nxref\n").unwrap();
+            for data in [&bytes[..], &bytes[..xref]] {
+                assert_eq!(crate::info(data, None).unwrap().pages.len(), 1);
+                let doc = crate::import(data).unwrap();
+                assert!(doc.layers.iter().any(|layer| layer.children().is_some_and(|children| !children.is_empty())));
+            }
+        }
+    }
+}
+
+#[test]
+fn malformed_resource_definitions_remain_refused() {
+    for resources in ["/Font << /F1 << /Type /Font /Subtype /#zz >> >>", "/ColorSpace << /CS0 [/ICCBased << /N /#zz >>] >>"] {
+        let bytes = page(resources, b"0 1 0 rg 10 10 20 20 re f", &[]);
+        assert!(matches!(crate::import(&bytes), Err(crate::PdfError::Parse(message)) if message.contains("dictionary value")));
+    }
+}
+
+#[test]
+fn resource_recovery_does_not_exempt_other_dictionary_uses() {
+    let damaged = "<< /Unused /#zz >>";
+    let content = b"0 1 0 rg 10 10 20 20 re f";
+    for bytes in [
+        // Identical bytes at different locations must retain their separate policies.
+        page(&format!("/Font {damaged} /Unknown {damaged}"), content, &[]),
+        // A name that looks like a resource scope does not make it a page's resources.
+        page(&format!("/Unknown << /Resources << /Font {damaged} >> >>"), content, &[]),
+        // The same indirect map also used as an ordinary dictionary, array item or font.
+        page("/Font 5 0 R /Unknown 5 0 R", content, &[damaged.as_bytes().to_vec()]),
+        page("/Font 5 0 R /Unknown [5 0 R]", content, &[damaged.as_bytes().to_vec()]),
+        page("/Font 5 0 R", content, &[b"<< /Unused /#zz /F1 5 0 R >>".to_vec()]),
+        // Nor can an ordinary alias to the entire resource scope grant recovery.
+        assemble(&[
+            b"<< /Type /Catalog /Pages 2 0 R /Unknown 5 0 R >>".to_vec(),
+            b"<< /Type /Pages /Count 1 /Kids [3 0 R] >>".to_vec(),
+            b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 100 60] /Contents 4 0 R /Resources 5 0 R >>".to_vec(),
+            stream("", content),
+            b"<< /Font 6 0 R >>".to_vec(),
+            damaged.as_bytes().to_vec(),
+        ]),
+        // A stream can be read as a Dict by a typed lookup; it must never qualify.
+        page("/Font 5 0 R", content, &[stream("/Subtype /application#-Fjson", b"original synthetic data")]),
+    ] {
+        let xref = bytes.windows(6).rposition(|window| window == b"\nxref\n").unwrap();
+        for data in [&bytes[..], &bytes[..xref]] {
+            assert!(matches!(crate::import(data), Err(crate::PdfError::Parse(message)) if message.contains("dictionary value")));
+        }
+    }
+}
+
+#[test]
+fn a_malformed_catalog_value_is_not_treated_as_an_unused_object() {
+    for resources in ["", "/Resources << /Font 1 0 R >>", "/Resources << /ColorSpace 1 0 R >>"] {
+        let bytes = assemble(&[
+            b"<< /Type /Catalog /Pages 2 0 R /Unknown /#zz >>".to_vec(),
+            b"<< /Type /Pages /Count 1 /Kids [3 0 R] >>".to_vec(),
+            format!("<< /Type /Page /Parent 2 0 R /MediaBox [0 0 100 60] {resources} >>").into_bytes(),
+        ]);
+        assert!(matches!(crate::info(&bytes, None), Err(crate::PdfError::Parse(message)) if message.contains("dictionary value")));
+    }
+}
+
+#[test]
+fn malformed_trailer_info_remains_a_strict_dictionary_use() {
+    for resources in ["", "/Resources << /Font 5 0 R >>", "/Resources << /ColorSpace 5 0 R >>"] {
+        let bytes = assemble(&[
+            b"<< /Type /Catalog /Pages 2 0 R >>".to_vec(),
+            b"<< /Type /Pages /Count 1 /Kids [3 0 R] >>".to_vec(),
+            format!("<< /Type /Page /Parent 2 0 R /MediaBox [0 0 100 60] /Contents 4 0 R {resources} >>").into_bytes(),
+            stream("", b"0 1 0 rg 10 10 20 20 re f"),
+            b"<< /Title (Original) /Unknown /#zz >>".to_vec(),
+        ]);
+        // Trailer edits leave the preceding object offsets and startxref unchanged. Names and
+        // duplicate keys follow the shared reader's escaping and last-key-wins rules.
+        for info in ["/Info 5 0 R", "/#49nfo 5 0 R", "/Info 1 0 R /Info 5 0 R"] {
+            let bytes = String::from_utf8(bytes.clone()).unwrap().replace("/Root 1 0 R >>", &format!("/Root 1 0 R {info} >>")).into_bytes();
+            assert!(
+                matches!(crate::import(&bytes), Err(crate::PdfError::Parse(message)) if message.contains("dictionary value")),
+                "{resources}: {info}"
+            );
+        }
+    }
+}
+
+#[test]
+fn a_page_recovered_without_an_incoming_reference_remains_strict() {
+    let bytes = assemble(&[
+        b"<< /Type /Catalog /Pages 2 0 R >>".to_vec(),
+        b"<< /Type /Pages /Count 1 >>".to_vec(),
+        b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 100 60] /Contents 4 0 R /Unknown /#zz >>".to_vec(),
+        stream("", b"0 1 0 rg 10 10 20 20 re f"),
+    ]);
+    assert!(matches!(crate::info(&bytes, None), Err(crate::PdfError::Parse(message)) if message.contains("dictionary value")));
+}
+
 pub(crate) fn resource_scope_cases() -> Vec<(&'static str, Vec<u8>, bool)> {
     [
         ("absent", "", true),

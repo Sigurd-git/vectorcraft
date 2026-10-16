@@ -14,6 +14,7 @@
 //! or 128-bit AES into its open (user) password, so either password opens it.
 
 use aes::cipher::{BlockEncrypt, KeyInit};
+use craft_pdf::syntax::object::{Dict, FromBytes, ObjectIdentifier};
 use md5::Md5;
 use sha2::{Digest, Sha256, Sha384, Sha512};
 
@@ -1001,6 +1002,26 @@ fn trailer(pdf: &[u8]) -> Option<Obj<'_>> {
     let mut lx = Lexer::at(pdf, off);
     lx.header()?;
     lx.object(0)
+}
+
+/// Indirect trailer entries consumed outside the PDF object's own references, root first.
+/// Reuse the security reader's trailer parser for tables and streams. A file with no trailer
+/// or startxref is repaired from its objects; an ambiguous trailer keeps strict import policy.
+pub(crate) fn trailer_references(pdf: &[u8]) -> Option<Vec<ObjectIdentifier>> {
+    if !pdf.windows(7).any(|word| word == b"trailer") && !pdf.windows(9).any(|word| word == b"startxref") {
+        return Some(vec![]);
+    }
+    let Obj::Dict { start, end, .. } = trailer(pdf)? else { return None };
+    // Use the import reader for keys and references too: escaped names and duplicate keys
+    // must select the same objects as import, rather than the security editor's first key.
+    let trailer = Dict::from_bytes(pdf.get(start..end)?)?;
+    let mut references = vec![trailer.get_ref(b"Root")?.into()];
+    for key in [&b"Info"[..], b"Encrypt"] {
+        if let Some(reference) = trailer.get_ref(key) {
+            references.push(reference.into());
+        }
+    }
+    Some(references)
 }
 
 /// The object `num generation` of `pdf`, found by its header (the last one in the file).
