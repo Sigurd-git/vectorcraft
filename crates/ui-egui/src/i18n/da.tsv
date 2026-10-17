@@ -2416,6 +2416,9 @@ lighting	Light	Lys
 	Embed ICC Profiles	Indlejr ICC-profiler
 	File Name:	Filnavn:
 	Save As	Gem som
+	Default Save Format	Standardformat til lagring
+	VectorCraft (.vectorcraft)	VectorCraft (.vectorcraft)
+	PDF-compatible .ai	PDF-kompatibel .ai
 	Save as Template	Gem som skabelon
 	Save each artboard to a separate file	Gem hvert tegnebræt i en separat fil
 	All printer's marks	Alle trykmærker

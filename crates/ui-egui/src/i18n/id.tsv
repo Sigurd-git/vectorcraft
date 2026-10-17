@@ -2416,6 +2416,9 @@ lighting	Light	Cahaya
 	Embed ICC Profiles	Sematkan profil ICC
 	File Name:	Nama file:
 	Save As	Simpan sebagai
+	Default Save Format	Format penyimpanan default
+	VectorCraft (.vectorcraft)	VectorCraft (.vectorcraft)
+	PDF-compatible .ai	.ai kompatibel PDF
 	Save as Template	Simpan sebagai templat
 	Save each artboard to a separate file	Simpan setiap artboard ke file terpisah
 	All printer's marks	Semua marka cetak

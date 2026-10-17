@@ -2430,6 +2430,9 @@ lighting	Light	Licht
 	Embed ICC Profiles	ICC-profielen insluiten
 	File Name:	Bestandsnaam:
 	Save As	Opslaan als
+	Default Save Format	Standaardopslagindeling
+	VectorCraft (.vectorcraft)	VectorCraft (.vectorcraft)
+	PDF-compatible .ai	PDF-compatibel .ai
 	Save as Template	Opslaan als sjabloon
 	Save each artboard to a separate file	Elk tekenbord in een apart bestand opslaan
 	All printer's marks	Alle drukkerstekens
