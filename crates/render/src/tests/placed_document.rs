@@ -112,13 +112,13 @@ fn render(d: &Document, progressive: bool) -> Rendered {
     Renderer::new().render(d, 100, 100, Affine::IDENTITY, &opts)
 }
 
-/// Wait for the background bitmaps (at most 10 s).
-fn settle() {
+/// Wait for this test's background bitmaps (at most 10 s), independently of parallel tests.
+fn settle(keys: &[&str]) {
     let t = std::time::Instant::now();
-    while placed_document::busy() && t.elapsed().as_secs() < 10 {
+    while keys.iter().any(|key| placed_document::pending_for(key)) && t.elapsed().as_secs() < 10 {
         std::thread::sleep(std::time::Duration::from_millis(5));
     }
-    assert!(!placed_document::busy(), "bitmaps still coming");
+    assert!(keys.iter().all(|key| !placed_document::pending_for(key)), "bitmaps still coming for {keys:?}");
 }
 
 #[test]
@@ -184,7 +184,7 @@ fn on_screen_a_placed_document_shows_a_placeholder_then_its_bitmap() {
     let first = render(&d, true);
     let shown = &first.pixel(50, 30)[..3];
     assert!(shown == [0, 0, 255] || shown != [255, 255, 255], "a placeholder or the art: {shown:?}");
-    settle();
+    settle(&["progressive-1"]);
     assert!(placed_document::generation() > generation || shown == [0, 0, 255], "a bitmap was made");
     let later = render(&d, true);
     let exact = render(&d, false);
@@ -206,7 +206,7 @@ fn copies_of_one_placed_document_share_its_bitmap() {
     copy.transform(Affine::translate((0.0, 45.0)), false);
     d.insert(Some(l), 1, copy).unwrap();
     render(&d, true);
-    settle();
+    settle(&["shared-1"]);
     let r = render(&d, true);
     assert!(!placed_document::pending_for("shared-1"), "nothing more to make");
     assert_eq!(&r.pixel(50, 30)[..3], &[0, 0, 255]);
@@ -230,7 +230,7 @@ fn nine_large_bitmaps_on_screen_are_not_made_again() {
     let (view, opts) = (Affine::scale(4096.0), RenderOptions { progressive_placed: true, ..Default::default() });
     let mut r = Renderer::new();
     r.render(&d, 32, 32, view, &opts);
-    settle();
+    settle(&keys.iter().map(String::as_str).collect::<Vec<_>>());
     let asked = || keys.iter().map(|k| placed_document::scheduled(k)).collect::<Vec<_>>();
     assert_eq!(asked(), vec![1; 9], "each asked for once");
     for frame in 1..=2 {
@@ -261,7 +261,7 @@ fn a_bitmap_that_cant_be_made_is_not_asked_for_again() {
     let d = doc_with("unreadable-1", b"bad");
     let generation = placed_document::generation();
     render(&d, true);
-    settle();
+    settle(&["unreadable-1"]);
     assert_eq!(placed_document::generation(), generation, "nothing new to draw");
     let later = render(&d, true);
     assert_eq!(placed_document::scheduled("unreadable-1"), 1, "asked for once");
@@ -330,7 +330,7 @@ fn a_ready_bitmap_draws_again_where_its_file_shows() {
     shut_gate();
     let before = r.render(&d, 100, 100, Affine::IDENTITY, &opts);
     open_gate();
-    settle();
+    settle(&["area-a", "area-b"]);
     let made = placed_document::made_between(generation, placed_document::generation()).expect("known");
     let files = |keys: &[&str]| keys.iter().map(|k| k.to_string()).collect::<std::collections::HashSet<_>>();
     assert_eq!(made, files(&["area-a", "area-b"]), "both files' bitmaps");
@@ -383,7 +383,7 @@ fn a_placed_document_kept_as_its_preview_draws_the_preview() {
     assert_eq!(&exact.pixel(95, 95)[..3], &[255, 255, 255]);
     // On screen past the preview's resolution (it has 0.5 px a point; this is 2): still the preview.
     render(&d, true);
-    settle();
+    settle(&["preview-1"]);
     let shown = render(&d, true);
     assert_eq!(&shown.pixel(50, 30)[..3], &[0, 200, 0]);
 }
@@ -398,6 +398,6 @@ fn a_document_that_places_itself_draws_a_few_levels_deep_then_stops() {
     assert_eq!(&r.pixel(50, 30)[..3], &[0, 0, 255]);
     // On screen too.
     render(&d, true);
-    settle();
+    settle(&["loop-1"]);
     assert_eq!(&render(&d, true).pixel(50, 30)[..3], &[0, 0, 255]);
 }
