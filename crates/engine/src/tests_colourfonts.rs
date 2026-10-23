@@ -83,14 +83,18 @@ fn create_outlines_turns_svg_glyphs_into_groups() {
 fn pdf_real_text_draws_svg_glyphs_as_art_and_keeps_their_characters() {
     let g = source_sans_gid(SVG_CHAR).unwrap();
     let doc = format!(r##"<svg xmlns="http://www.w3.org/2000/svg"><g id="glyph{g}"><path fill="#f00" d="M0 0h500v-700h-500z"/></g></svg>"##);
-    let s = with_svg_type("Svgtest Pdf", &doc);
+    // Operator-like tokens in font metadata are not page text-showing operations.
+    let s = with_svg_type("Svgtest Tj TJ Pdf", &doc);
     let d = s.doc().unwrap().doc.clone();
     let pdf = vectorcraft_pdf::export(&d, &vectorcraft_pdf::PdfOptions::uncompressed()).unwrap();
     // The glyphs each text-showing line writes (the font's codes are octal escapes), and whether
     // it is invisible.
     let raw = String::from_utf8_lossy(&pdf);
+    let parsed = craft_pdf::syntax::Pdf::new(pdf.clone()).unwrap();
+    let pages = parsed.pages();
+    let content = std::str::from_utf8(pages.first().unwrap().page_stream().unwrap()).unwrap();
     let shown: Vec<(bool, usize)> =
-        raw.lines().filter(|l| l.contains("Tj") || l.contains("TJ")).map(|l| (l.contains("3 Tr"), l.matches("\\0").count())).collect();
+        content.lines().filter(|l| l.contains("Tj") || l.contains("TJ")).map(|l| (l.contains("3 Tr"), l.matches("\\0").count())).collect();
     assert_eq!(shown, [(false, 2)], "both characters once, as text");
     // The glyphs as the font draws them (its Type 3 glyph procedures, `<width> 0 d0` and what
     // they paint): the SVG glyph's draws nothing, rather than the font's plain outline over the

@@ -46,6 +46,8 @@ thiserror = { workspace = true }
 log = { workspace = true }
 
 [dev-dependencies]
+# Inspect PDF page content without treating font metadata as drawing operations.
+craft-pdf = { workspace = true, features = ["read"] }
 vectorcraft-affinity = { workspace = true, features = ["synth"] }
 crc32fast = { workspace = true }
 vectorcraft-testkit = { workspace = true }
