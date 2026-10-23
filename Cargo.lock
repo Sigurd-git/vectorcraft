@@ -6827,6 +6827,7 @@ dependencies = [
  "craft-docpath",
  "craft-image-codecs 0.1.0 (git+https://github.com/storytold/craft-libs?rev=a499742a9389f47d10cdc61e4cdbf4e5f07f48cd)",
  "craft-jxl",
+ "craft-pdf",
  "craft-proof",
  "craft-stream-codecs",
  "craft-xml 0.1.0 (git+https://github.com/storytold/craft-libs?rev=a499742a9389f47d10cdc61e4cdbf4e5f07f48cd)",

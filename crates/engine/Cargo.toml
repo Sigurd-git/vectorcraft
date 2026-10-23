@@ -90,6 +90,8 @@ craft-jxl = { workspace = true }
 hayro-ccitt = { workspace = true }
 tiff = { workspace = true }
 craft-stream-codecs = { workspace = true }
+# Inspect PDF page content without treating font metadata as drawing operations.
+craft-pdf = { workspace = true, features = ["read"] }
 vectorcraft-affinity = { workspace = true, features = ["synth"] }
 crc32fast = { workspace = true }
 vectorcraft-testkit = { workspace = true }

@@ -85,14 +85,18 @@ fn pdf_real_text_draws_svg_glyphs_as_art_and_keeps_their_characters() {
     let _fonts = crate::adding_fonts();
     let g = source_sans_gid(SVG_CHAR).unwrap();
     let doc = format!(r##"<svg xmlns="http://www.w3.org/2000/svg"><g id="glyph{g}"><path fill="#f00" d="M0 0h500v-700h-500z"/></g></svg>"##);
-    let s = with_svg_type("Svgtest Pdf", &doc);
+    // Operator-like tokens in font metadata are not page text-showing operations.
+    let s = with_svg_type("Svgtest Tj TJ Pdf", &doc);
     let d = s.doc().unwrap().doc.clone();
     let pdf = vectorcraft_pdf::export(&d, &vectorcraft_pdf::PdfOptions::uncompressed()).unwrap();
     // The glyphs each text-showing line writes (the font's codes are octal escapes), and whether
     // it is invisible. Only text objects count: the file ID in the trailer and the XMP is random
     // base64, which now and then spells `Tj` or `TJ`.
     let raw = String::from_utf8_lossy(&pdf);
-    let shown: Vec<(bool, usize)> = raw
+    let parsed = craft_pdf::syntax::Pdf::new(pdf.clone()).unwrap();
+    let pages = parsed.pages();
+    let content = std::str::from_utf8(pages.first().unwrap().page_stream().unwrap()).unwrap();
+    let shown: Vec<(bool, usize)> = content
         .lines()
         .filter(|l| l.starts_with("BT ") && (l.contains("Tj") || l.contains("TJ")))
         .map(|l| (l.contains("3 Tr"), l.matches("\\0").count()))
