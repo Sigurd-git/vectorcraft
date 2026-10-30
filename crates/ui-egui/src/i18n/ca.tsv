@@ -6374,3 +6374,6 @@ breakText	Glyphs	Glifs
 # Compound Shapes add-on
 	Compound Shapes	Formes compostes
 	Shape Mode Buttons Make Compound Shapes	Els botons de mode de forma creen formes compostes
+	Default Save Format	Format de desament predeterminat
+	VectorCraft (.vectorcraft)	VectorCraft (.vectorcraft)
+	PDF-compatible .ai	.ai compatible amb PDF

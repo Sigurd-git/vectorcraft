@@ -340,7 +340,7 @@ fn stream_kind(pdf: &Pdf, id: ObjectIdentifier, dict: &Dict<'_>) -> String {
         return "a page's content in it".to_string();
     }
     let private = pages.first().and_then(|p| p.raw().get::<Dict<'_>>(b"PieceInfo")?.get::<Dict<'_>>(PRIVATE_DATA_OWNER)?.get::<Dict<'_>>(b"Private"));
-    if private.is_some_and(|d| d.entries().any(|(key, m)| key.as_ref().starts_with(b"AI") && is(Some(m)))) {
+    if private.is_some_and(|d| d.keys().any(|key| key.as_ref().starts_with(b"AI") && is(d.get_raw::<Object<'_>>(key.as_ref())))) {
         return "its editing data".to_string();
     }
     "a stream in it".to_string()
