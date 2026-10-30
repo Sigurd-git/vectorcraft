@@ -54,6 +54,28 @@ fn malformed_dictionary_values_are_refused_before_import() {
 }
 
 #[test]
+fn stream_diagnostics_use_fallible_editing_data_lookups() {
+    for (damaged, private_stream, kind) in
+        [("", 5, "its editing data"), ("/ABroken /#zz", 5, "its editing data"), ("/AI0Broken /#zz", 5, "its editing data"), ("", 4, "a stream in it")]
+    {
+        let bytes = assemble(&[
+            b"<< /Type /Catalog /Pages 2 0 R >>".to_vec(),
+            b"<< /Type /Pages /Count 1 /Kids [3 0 R] >>".to_vec(),
+            format!(
+                "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 100 60] /Contents 4 0 R /Resources << >> /PieceInfo << /Illustrator << /Private << {damaged} /AIPrivateData1 {private_stream} 0 R >> >> >> >>"
+            )
+            .into_bytes(),
+            stream("", b"0 1 0 rg 10 10 20 20 re f"),
+            stream("/Filter /FlateDecode /DecodeParms << /Predictor 12 /Columns 0 >>", b""),
+        ]);
+        let expected = format!("{kind} (object 5) has decode parameters that can't be applied");
+        // Call the library directly: no engine panic guard may hide a failed lookup.
+        assert!(matches!(crate::info(&bytes, None), Err(crate::PdfError::Parse(message)) if message == expected));
+        assert!(matches!(crate::import(&bytes), Err(crate::PdfError::Parse(message)) if message == expected));
+    }
+}
+
+#[test]
 fn valid_escaped_names_in_dictionary_values_remain_readable() {
     let bytes = page(
         "/Unknown << /Subtype /application#2Fjson >>",
