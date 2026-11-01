@@ -169,9 +169,9 @@ pub enum PixelOp {
 /// layer, which does not count here; an object isolated inside them counts.
 pub fn ordinary_isolation(doc: &Document, isolation: Option<NodeId>) -> Option<NodeId> {
     isolation.filter(|l| {
-        !doc.pattern_edit.as_ref().is_some_and(|e| e.layer == *l)
-            && !doc.mask_edit.as_ref().is_some_and(|e| e.layer == *l)
-            && !doc.symbol_edit.as_ref().is_some_and(|e| e.layer == *l)
+        doc.pattern_edit.as_ref().is_none_or(|e| e.layer != *l)
+            && doc.mask_edit.as_ref().is_none_or(|e| e.layer != *l)
+            && doc.symbol_edit.as_ref().is_none_or(|e| e.layer != *l)
     })
 }
 
