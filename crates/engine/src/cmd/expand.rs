@@ -630,10 +630,10 @@ fn expand_live_with_transparent_image_patterns(
             return;
         }
         match &n.kind {
-            NodeKind::Blend { .. } | NodeKind::Envelope { .. } | NodeKind::Repeat(_) | NodeKind::Intertwine { .. } => {
-                if holds_transparent_image_patterns(d, n, see_through, colorize, levels) {
-                    out.push(n.id);
-                }
+            NodeKind::Blend { .. } | NodeKind::Envelope { .. } | NodeKind::Repeat(_) | NodeKind::Intertwine { .. }
+                if holds_transparent_image_patterns(d, n, see_through, colorize, levels) =>
+            {
+                out.push(n.id);
             }
             NodeKind::Group { children, .. } | NodeKind::Layer { children, .. } => {
                 children.iter().for_each(|c| outermost(d, c, see_through, colorize, levels, out));
