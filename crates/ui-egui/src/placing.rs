@@ -390,7 +390,7 @@ pub fn poll(app: &mut VectorcraftApp) {
         }
         p.scope.clone().run(|| finish(app, &p, r));
         if let Some(chain) = p.chain
-            && !app.placing.swatch_paste.as_ref().is_some_and(|waiting| waiting.chain == chain)
+            && app.placing.swatch_paste.as_ref().is_none_or(|waiting| waiting.chain != chain)
         {
             finish_chain(app, chain);
         }
@@ -563,7 +563,7 @@ pub(crate) fn settle_swatch_paste(app: &mut VectorcraftApp) {
 
 /// Run the command confirmed by the deferred paste's Swatch Conflict dialog.
 pub(crate) fn confirm_swatch_paste(app: &mut VectorcraftApp, id: &str, params: Value, token: Option<u64>) -> Result<Value, String> {
-    if !app.placing.swatch_paste.as_ref().is_some_and(|waiting| Some(waiting.chain) == token) {
+    if app.placing.swatch_paste.as_ref().is_none_or(|waiting| Some(waiting.chain) != token) {
         if token.is_some() || app.placing.swatch_paste.is_some() {
             cancel_swatch_paste(app);
             return Err("the deferred paste is no longer available".into());
