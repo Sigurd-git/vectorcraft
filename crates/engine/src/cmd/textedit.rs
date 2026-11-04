@@ -1658,7 +1658,7 @@ pub(crate) fn editing_range(s: &mut Session) -> Result<Option<(NodeId, usize, us
 pub(crate) fn editing_story(s: &Session) -> Vec<NodeId> {
     let o = s.tool_options();
     let Some(id) = o.get("editing").and_then(Value::as_u64).map(NodeId) else { return vec![] };
-    if !o.get("story").and_then(Value::as_array).is_some_and(|ids| !ids.is_empty()) {
+    if o.get("story").and_then(Value::as_array).is_none_or(|ids| ids.is_empty()) {
         return vec![];
     }
     s.active().map(|st| super::threads::story_of(&st.doc, id)).unwrap_or_default()

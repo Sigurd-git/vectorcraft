@@ -1188,17 +1188,28 @@ mod tests_default_save_format {
     fn default_ai_contains_visible_pdf_and_restores_editable_art() {
         let mut s = new_ai_session();
         s.execute("shape.rectangle", &json!({"x": 10, "y": 10, "width": 60, "height": 30})).unwrap();
-        let result = s.execute("document.save", &json!({})).unwrap();
-        assert_eq!(result["format"], "ai");
-        assert!(result["name"].as_str().unwrap().ends_with(".ai"));
-        let bytes = vectorcraft_format::base64_decode(result["dataBase64"].as_str().unwrap()).unwrap();
-        assert!(bytes.starts_with(b"%PDF"));
-        assert!(vectorcraft_pdf::editing(&bytes).is_some_and(|e| e.intact));
-        let loaded = load("art.ai", &bytes).unwrap();
-        assert!(loaded.restored);
-        assert_eq!(loaded.doc.layers, s.doc().unwrap().doc.layers);
-        assert_eq!(loaded.doc.artboards, s.doc().unwrap().doc.artboards);
-        assert!(result["warnings"].as_array().unwrap().is_empty());
+        // The optional editing copy for other apps cannot hold the default gradient/pattern
+        // swatches. Report that exact limitation; the native attachment must keep them all.
+        for (params, other_apps) in [(json!({}), true), (json!({"editingData": false}), false)] {
+            let result = s.execute("document.save", &params).unwrap();
+            assert_eq!(result["format"], "ai");
+            assert!(result["name"].as_str().unwrap().ends_with(".ai"));
+            let bytes = vectorcraft_format::base64_decode(result["dataBase64"].as_str().unwrap()).unwrap();
+            assert!(bytes.starts_with(b"%PDF"));
+            assert!(vectorcraft_pdf::editing(&bytes).is_some_and(|e| e.intact));
+            let loaded = load("art.ai", &bytes).unwrap();
+            assert!(loaded.restored);
+            assert_eq!(loaded.doc.layers, s.doc().unwrap().doc.layers);
+            assert_eq!(loaded.doc.artboards, s.doc().unwrap().doc.artboards);
+            assert_eq!(loaded.doc.swatches, s.doc().unwrap().doc.swatches);
+            assert_eq!(loaded.doc.swatch_groups, s.doc().unwrap().doc.swatch_groups);
+            assert!(loaded.warnings.is_empty(), "{:?}", loaded.warnings);
+            if other_apps {
+                assert_eq!(result["warnings"], json!(["gradient and pattern swatches are left out of the editing data for other apps"]));
+            } else {
+                assert!(result["warnings"].as_array().unwrap().is_empty(), "{:?}", result["warnings"]);
+            }
+        }
     }
 }
 

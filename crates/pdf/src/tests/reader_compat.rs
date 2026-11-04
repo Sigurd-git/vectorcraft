@@ -54,6 +54,35 @@ fn malformed_dictionary_values_are_refused_before_import() {
 }
 
 #[test]
+fn editing_data_recovery_retains_dictionary_refusals() {
+    let private = b"original synthetic private data";
+    for dictionary in [false, true] {
+        for escaped in ["application#2Fjson", "application#-Fjson"] {
+            let damaged = format!("/Subtype /{escaped}");
+            let attachment = if dictionary { format!("<< {damaged} >>").into_bytes() } else { stream(&damaged, b"original synthetic attachment") };
+            let bytes = assemble(&[
+                b"<< /Type /Catalog /Pages 2 0 R /Attachment 6 0 R >>".to_vec(),
+                b"<< /Type /Pages /Count 1 /Kids [3 0 R] >>".to_vec(),
+                b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 100 60] /Contents 4 0 R /Resources << >> /PieceInfo << /Illustrator << /Private << /AIPrivateData1 5 0 R >> >> >> >>".to_vec(),
+                stream("", b"0 1 0 rg 10 10 20 20 re f"),
+                stream("", private),
+                attachment,
+            ]);
+            let xref = bytes.windows(6).rposition(|w| w == b"\nxref\n").unwrap();
+            for input in [&bytes[..], &bytes[..xref]] {
+                let recovered = crate::illustrator_data_without_pdf_part(input, None);
+                if escaped == "application#2Fjson" {
+                    assert_eq!(recovered.unwrap().data, private, "{dictionary}, {escaped}");
+                } else {
+                    assert!(matches!(crate::info(input, None), Err(crate::PdfError::Parse(message)) if message.contains("dictionary value")));
+                    assert!(recovered.is_none(), "{dictionary}, {escaped}");
+                }
+            }
+        }
+    }
+}
+
+#[test]
 fn stream_diagnostics_use_fallible_editing_data_lookups() {
     for (damaged, private_stream, kind) in
         [("", 5, "its editing data"), ("/ABroken /#zz", 5, "its editing data"), ("/AI0Broken /#zz", 5, "its editing data"), ("", 4, "a stream in it")]

@@ -195,6 +195,12 @@ fn referenced_dict<'a>(value: &MaybeRef<Object<'a>>, xref: &'a XRef) -> Option<D
 /// stream written inside one, wherever it is used from: the interpreter builds functions and
 /// color spaces from resources, shadings, images, patterns, masks and graphics states alike.
 fn hostile(pdf: &Pdf) -> Option<String> {
+    hostile_objects(pdf, true)
+}
+
+/// Check arrays and dictionaries even when recovering only the private editing data. That path
+/// need not draw PDF streams or follow their functions, but must not bypass structural refusals.
+fn hostile_objects(pdf: &Pdf, check_drawing: bool) -> Option<String> {
     let xref = pdf.xref();
     let mut known = HashMap::new();
     let mut unreadable_dicts = HashSet::new();
@@ -227,12 +233,13 @@ fn hostile(pdf: &Pdf) -> Option<String> {
     let mut pending: Vec<Object<'_>> = pdf.objects().into_iter().collect();
     while let Some(o) = pending.pop() {
         // A stream's own checks come first: a calculator function is decoded below.
-        if let Object::Stream(s) = &o
+        if check_drawing
+            && let Object::Stream(s) = &o
             && let Some(r) = refused(s)
         {
             return Some(stream_note(pdf, s, r));
         }
-        if procedures_too_deep(&o) || built_on(MaybeRef::NotRef(o.clone()), xref, &mut known, MAX_LINKS).is_none() {
+        if check_drawing && (procedures_too_deep(&o) || built_on(MaybeRef::NotRef(o.clone()), xref, &mut known, MAX_LINKS).is_none()) {
             return Some(NESTED_NOTE.into());
         }
         match &o {
@@ -619,11 +626,16 @@ pub struct IllustratorData {
 }
 
 /// [`illustrator_data`] for a file whose PDF part can't be read (a stream the import refuses, or
-/// objects built on one another without end): the file is opened without looking at its other
-/// objects, and only the private data streams are read, with the same limits. `None` when the
-/// file itself can't be opened, or as for [`illustrator_data`].
+/// objects built on one another without end): arrays and dictionaries still undergo the import's
+/// structural checks, without decoding other streams or following their functions. Only the
+/// private data streams are decoded, with the same limits. `None` when the file itself can't be
+/// opened, its structure is refused, or as for [`illustrator_data`].
 pub fn illustrator_data_without_pdf_part(bytes: &[u8], password: Option<&str>) -> Option<IllustratorData> {
     let pdf = open_structural_with_options(bytes, password, &open_options()).ok()?;
+    // The object table may repair itself on the first walk, as for ordinary import.
+    if (0..2).any(|_| hostile_objects(&pdf, false).is_some()) {
+        return None;
+    }
     let data = private_data(&pdf)?;
     let page = pdf.pages().first()?;
     // (The page transform is in points: it applies the `UserUnit`.)

@@ -790,7 +790,7 @@ fn shares(marks: &[bool], w: usize, h: usize, rects: &[Rect]) -> Vec<f64> {
         .iter()
         .map(|r| pixel_box(r, w, h))
         .try_fold(0usize, |n, (x0, y0, x1, y1)| n.checked_add(x1.saturating_sub(x0).checked_mul(y1.saturating_sub(y0))?));
-    if !few.is_some_and(|n| n <= w * h) {
+    if few.is_none_or(|n| n > w * h) {
         let counted = Shares::of(marks, w, h);
         return rects.iter().map(|r| counted.share(r)).collect();
     }
