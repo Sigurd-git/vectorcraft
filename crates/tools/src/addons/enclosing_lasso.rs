@@ -114,16 +114,14 @@ impl Tool for EnclosingLassoTool {
                 self.points = vec![ev.pos];
                 self.active = true;
             }
-            PointerKind::Drag if self.active => {
-                if self.points.last().is_none_or(|p| p.distance(ev.pos) >= cx.tol(1.0)) {
-                    // Cancel rather than testing a truncated loop that could select other art.
-                    if self.points.len() >= MAX_POINTS {
-                        self.active = false;
-                        self.points.clear();
-                        return vec![];
-                    }
-                    self.points.push(ev.pos);
+            PointerKind::Drag if self.active && self.points.last().is_none_or(|p| p.distance(ev.pos) >= cx.tol(1.0)) => {
+                // Cancel rather than testing a truncated loop that could select other art.
+                if self.points.len() >= MAX_POINTS {
+                    self.active = false;
+                    self.points.clear();
+                    return vec![];
                 }
+                self.points.push(ev.pos);
             }
             PointerKind::Up if self.active => {
                 self.active = false;
