@@ -1188,8 +1188,9 @@ mod tests_default_save_format {
     fn default_ai_contains_visible_pdf_and_restores_editable_art() {
         let mut s = new_ai_session();
         s.execute("shape.rectangle", &json!({"x": 10, "y": 10, "width": 60, "height": 30})).unwrap();
-        // The optional editing copy for other apps cannot hold the default gradient/pattern
-        // swatches. Report that exact limitation; the native attachment must keep them all.
+        // The optional editing copy for other apps now keeps the default gradient and pattern
+        // swatches, so neither mode warns. The copy is present only when enabled, and the native
+        // attachment must restore every layer, artboard, swatch and swatch group in both modes.
         for (params, other_apps) in [(json!({}), true), (json!({"editingData": false}), false)] {
             let result = s.execute("document.save", &params).unwrap();
             assert_eq!(result["format"], "ai");
@@ -1204,11 +1205,8 @@ mod tests_default_save_format {
             assert_eq!(loaded.doc.swatches, s.doc().unwrap().doc.swatches);
             assert_eq!(loaded.doc.swatch_groups, s.doc().unwrap().doc.swatch_groups);
             assert!(loaded.warnings.is_empty(), "{:?}", loaded.warnings);
-            if other_apps {
-                assert_eq!(result["warnings"], json!(["gradient and pattern swatches are left out of the editing data for other apps"]));
-            } else {
-                assert!(result["warnings"].as_array().unwrap().is_empty(), "{:?}", result["warnings"]);
-            }
+            assert_eq!(vectorcraft_pdf::illustrator_data(&bytes, None).is_some(), other_apps);
+            assert!(result["warnings"].as_array().unwrap().is_empty(), "{:?}", result["warnings"]);
         }
     }
 }
