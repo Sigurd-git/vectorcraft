@@ -225,10 +225,8 @@ fn italic_names(app: &mut VectorcraftApp, ctx: &egui::Context) -> Vec<String> {
     out.textures_delta.clear();
     fn collect(shape: &egui::Shape, names: &mut Vec<String>) {
         match shape {
-            egui::Shape::Text(t) => {
-                if t.galley.job.sections.iter().any(|s| s.format.italics) {
-                    names.push(t.galley.text().to_string());
-                }
+            egui::Shape::Text(t) if t.galley.job.sections.iter().any(|s| s.format.italics) => {
+                names.push(t.galley.text().to_string());
             }
             egui::Shape::Vec(shapes) => shapes.iter().for_each(|s| collect(s, names)),
             _ => {}

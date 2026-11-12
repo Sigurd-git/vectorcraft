@@ -353,7 +353,7 @@ pub(crate) fn ns_binding_allowed(prefix: &[u16], uri: &[u16]) -> bool {
 /// no attribute in no namespace is named `xmlns`.
 pub(crate) fn xml_name_writable(name: &XmlName, attribute: bool) -> bool {
     let uri = name.uri.as_deref().unwrap_or_default();
-    !units_are(uri, XMLNS_URI) && !(attribute && uri.is_empty() && units_are(&name.local, "xmlns"))
+    !(units_are(uri, XMLNS_URI) || attribute && uri.is_empty() && units_are(&name.local, "xmlns"))
 }
 
 fn units_are(units: &[u16], text: &str) -> bool {

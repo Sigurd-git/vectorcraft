@@ -180,7 +180,7 @@ pub fn writes_image_mask(doc: &Document, n: &Node) -> bool {
     let fits =
         |bytes: &[u8]| vectorcraft_doc::header_size(bytes).is_some_and(|(w, h)| w > 0 && h > 0 && u64::from(w) * u64::from(h) <= MAX_IMAGE_PIXELS);
     matches!(n.extras().colorize.as_deref(), Some(Paint::Solid { .. }))
-        && !n.extras().mask.as_ref().is_some_and(|m| !m.disabled)
+        && n.extras().mask.as_ref().is_none_or(|m| m.disabled)
         && doc
             .image_blob(&doc.shown_image(n, im))
             .is_some_and(|b| b.takes_colorize() && fits(&b.bytes) && b.coverage().is_some_and(|(_, _, c)| c.iter().all(|&v| v == 0 || v == 255)))

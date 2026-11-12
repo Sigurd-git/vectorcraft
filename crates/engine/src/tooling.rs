@@ -510,7 +510,7 @@ impl Session {
     /// over) been made, and the edit they started on another thread applied?
     pub fn input_applied(&self, from: u64, to: u64) -> bool {
         let ours = |n: &u64| (from..to).contains(n);
-        !self.held_input.iter().any(|(n, ..)| ours(n)) && !(self.tool_edit_pending() && self.edit_started_by.as_ref().is_some_and(ours))
+        !(self.held_input.iter().any(|(n, ..)| ours(n)) || self.tool_edit_pending() && self.edit_started_by.as_ref().is_some_and(ours))
     }
 
     /// After event `n` was made: the event that started the edit being computed, if one is.

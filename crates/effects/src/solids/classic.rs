@@ -173,7 +173,7 @@ pub(crate) fn validate_classic(id: &str, p: &Value, ranges: &[(&str, f64, f64, b
     one_of("surface", &surfaces)?;
     one_of("shadingColor", &SHADING_COLORS)?;
     let key = "shadingCustom";
-    if map.get(key).is_some_and(|v| !v.as_str().is_some_and(|s| parse_hex(s).is_some())) {
+    if map.get(key).is_some_and(|v| v.as_str().is_none_or(|s| parse_hex(s).is_none())) {
         return Err(format!("`{key}` must be a #rrggbb color"));
     }
     Ok(())

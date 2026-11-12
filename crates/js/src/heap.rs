@@ -643,10 +643,8 @@ fn trace_object(o: &Object, work: &mut Vec<u32>, strings: &mut StringSizes) -> u
         }
         Class::Arguments(map) => work.push(map.env.0),
         Class::String(s) => strings.add(s),
-        Class::RegExp(re) => {
-            if strings.seen.insert(Rc::as_ptr(re) as *const () as usize) {
-                strings.bytes += re.heap_bytes();
-            }
+        Class::RegExp(re) if strings.seen.insert(Rc::as_ptr(re) as *const () as usize) => {
+            strings.bytes += re.heap_bytes();
         }
         Class::ForIn(state) => {
             work.extend(state.object.iter().map(|o| o.0));

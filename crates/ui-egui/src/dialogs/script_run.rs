@@ -186,7 +186,7 @@ pub(crate) fn ask_to_close(app: &mut VectorcraftApp) {
 /// script's dialog it was asked over once the run no longer waits at that dialog, so Cancel does
 /// not show it again.
 pub(crate) fn settle_close(app: &mut VectorcraftApp) {
-    if !app.ui.dialog.as_ref().is_some_and(|d| d.kind == CLOSE_KIND) {
+    if app.ui.dialog.as_ref().is_none_or(|d| d.kind != CLOSE_KIND) {
         return;
     }
     if !app.session.script_running() {
