@@ -1276,6 +1276,8 @@ fn ui_inspect_keeps_text_that_only_looks_like_a_library_id() {
 #[test]
 fn ui_inspect_script_report_leaves_out_files_outside_the_read_root() {
     let (mut app, tx, base) = confined("inspect-script-report");
+    // Script includes report resolved paths, including under macOS's symlinked temporary root.
+    let base = vectorcraft_engine::cmd::findfiles::plain(base.canonicalize().unwrap());
     let (kept, hidden) = (s(base.join("in/kept.svg")), s(base.join("outside/hidden.svg")));
     app.session.execute("file.new", &json!({"width": 100, "height": 100})).unwrap();
     let source = format!(

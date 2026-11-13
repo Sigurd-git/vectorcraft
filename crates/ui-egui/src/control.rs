@@ -442,7 +442,7 @@ fn sent_paths(v: &Value, out: &mut Vec<(String, String)>) {
 /// [`sent_paths`] on `v`, found at `place`, which a path param holds when `path_param` is set.
 fn collect_sent_paths(v: &Value, place: ParamsPlace, path_param: bool, out: &mut Vec<(String, String)>) {
     fn add(s: &str, path_param: bool, out: &mut Vec<(String, String)>) {
-        if !unreadable_path_like(s) && !(path_param && !readable_value(s)) {
+        if !(unreadable_path_like(s) || path_param && !readable_value(s)) {
             return;
         }
         // A URL that names another host as the path after its scheme (`//host/share/…`).
@@ -1110,7 +1110,7 @@ fn leave_out_unreadable_params(params: &mut serde_json::Map<String, Value>, plac
     params.retain(|key, v| {
         !unreadable_path_like(key)
             && match v.as_str() {
-                Some(p) => !unreadable_path_like(p) && !(place.member(key, carried).1.is_some() && !shown(p)),
+                Some(p) => !(unreadable_path_like(p) || place.member(key, carried).1.is_some() && !shown(p)),
                 None => true,
             }
     });

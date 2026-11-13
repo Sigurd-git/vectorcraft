@@ -123,6 +123,10 @@ fn tiled_documents_fit_their_panes_at_every_ui_scaling() {
     for ui_zoom in [0.75_f32, 1.5, 2.0] {
         let mut app = app_with(3);
         let ctx = egui::Context::default();
+        // egui derives the first zoomed screen rectangle from the previous frame. Seed it with
+        // the window size before zooming, so it does not use the new context's 10000-point default.
+        let raw = egui::RawInput { screen_rect: Some(egui::Rect::from_min_size(Pos2::ZERO, vec2(1200.0, 800.0))), ..Default::default() };
+        ctx.run_ui(raw, |_| {}).textures_delta.clear();
         ctx.set_zoom_factor(ui_zoom);
         let size = vec2(1200.0, 800.0) / ui_zoom;
         frame_in(&mut app, &ctx, vec![], size);

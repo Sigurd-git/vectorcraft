@@ -5788,7 +5788,7 @@ fn a_move_drag_keeps_the_bounding_box_where_the_drag_carries_the_selection() {
             app.session.pointer(&at(PointerKind::Drag, 170.0, 140.0), view).unwrap();
             assert!(app.session.tool_transforming() && !app.session.tool_resizing(), "{what}: the drag moves the selection");
             let (first, handles) = bounding_box_drawn(&mut app, &ctx);
-            if !while_moving && !(tool == "selection" && !real_time) {
+            if !(while_moving || tool == "selection" && !real_time) {
                 assert_eq!((first, handles), (None, 0), "{what}: the box hides during the move");
                 app.session.pointer(&at(PointerKind::Up, 190.0, 165.0), view).unwrap();
                 assert_eq!(bounding_box_drawn(&mut app, &ctx).1, 8, "{what}: back after the move");

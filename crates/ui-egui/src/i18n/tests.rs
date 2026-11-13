@@ -5567,10 +5567,10 @@ fn message_literals_in(names: &[&str]) -> std::collections::BTreeSet<String> {
                 if name != "tests" {
                     stack.push(path);
                 }
-            } else if name.ends_with(".rs")
-                && !name.starts_with("tests")
-                && !name.ends_with("_tests.rs")
-                && !(d == crates.join("ui-egui").join("src") && name == "control.rs")
+            } else if !(!name.ends_with(".rs")
+                || name.starts_with("tests")
+                || name.ends_with("_tests.rs")
+                || d == crates.join("ui-egui").join("src") && name == "control.rs")
             {
                 // Control replies are English protocol data, never status-bar messages
                 // (see i18n's module contract). Engine messages are scanned in their own crates.

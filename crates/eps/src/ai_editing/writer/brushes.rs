@@ -573,7 +573,7 @@ impl Writer<'_> {
         }
         // On a large canvas an empty panel is still written: the manager alone, with no art to scale.
         let empty = self.brushes.as_ref().is_some_and(|l| l.is_empty());
-        if !self.brushes_live && !(stored && empty) {
+        if !(self.brushes_live || stored && empty) {
             return (String::new(), String::new());
         }
         let art = if sections.is_empty() { String::new() } else { format!("%AI5_Begin_NonPrinting\nNp\n{sections}%AI5_End_NonPrinting--\n") };

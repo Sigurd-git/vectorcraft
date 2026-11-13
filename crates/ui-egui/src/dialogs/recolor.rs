@@ -439,7 +439,7 @@ const THEME_DONE: &str = "__themePicked";
 /// leave the rows as they are.
 fn sync_theme(app: &mut VectorcraftApp, d: &mut Dialog) {
     let picks = d.fields.get(THEME_PICKS).cloned().unwrap_or(Value::Null);
-    if !picks.as_array().is_some_and(|a| !a.is_empty()) || d.fields.get(THEME_DONE) == Some(&picks) {
+    if picks.as_array().is_none_or(|a| a.is_empty()) || d.fields.get(THEME_DONE) == Some(&picks) {
         return;
     }
     d.fields.insert(THEME_DONE.into(), picks.clone());

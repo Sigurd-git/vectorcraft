@@ -785,7 +785,7 @@ impl BrushesRead {
         st.items.iter().all(|item| match item {
             StyleItem::Stroke { brush: Some((name, settings)), .. } => {
                 let Some(draft) = self.by_name.get(name).and_then(|i| self.drafts.get(*i)) else { return false };
-                draws_as(draft, settings, &self.bending) && !(matches!(settings, PathBrush::Art(_)) && !st.effects.is_empty())
+                draws_as(draft, settings, &self.bending) && (!matches!(settings, PathBrush::Art(_)) || st.effects.is_empty())
             }
             _ => true,
         })

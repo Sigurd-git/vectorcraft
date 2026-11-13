@@ -1003,12 +1003,24 @@ impl Drawn {
 /// size `screen`, draws it until it settles and its samples are rendered, and returns what the
 /// last frame drew.
 fn open_menu(id: &str, left: f32, width: f32, screen: egui::Vec2) -> Drawn {
-    open_menu_with(id, left, width, screen, MenuLook::default(), None)
+    open_menu_with(id, left, width, screen, MenuLook::default(), None, false)
 }
 
-/// [`open_menu`] with the menu's look `look`, in the interface colors `tokens` when given.
-fn open_menu_with(id: &str, left: f32, width: f32, screen: egui::Vec2, look: MenuLook, tokens: Option<crate::theme::Tokens>) -> Drawn {
+/// [`open_menu`] with a custom look and interface colors. Tests that inspect sample meshes
+/// wait between frames so the next batch can render even when the workers are busy.
+fn open_menu_with(
+    id: &str,
+    left: f32,
+    width: f32,
+    screen: egui::Vec2,
+    look: MenuLook,
+    tokens: Option<crate::theme::Tokens>,
+    inspect_samples: bool,
+) -> Drawn {
     let ctx = egui::Context::default();
+    // Each fixture owns a fresh context. Drop old sample textures before a frame locks it.
+    crate::graphics::forget_textures();
+    crate::font_menu::wait_for_samples(&ctx);
     crate::theme::install_fonts(&ctx);
     if let Some(t) = tokens {
         ctx.data_mut(|d| d.insert_temp(egui::Id::NULL, t));
@@ -1033,6 +1045,9 @@ fn open_menu_with(id: &str, left: f32, width: f32, screen: egui::Vec2, look: Men
     // samples' tints are whole.
     for _ in 0..if tokens.is_some() { 15 } else { 5 } {
         frame(vec![]);
+        if inspect_samples {
+            crate::font_menu::wait_for_samples(&ctx);
+        }
     }
     // A frame starts only a few samples, and none while several are rendering: draw until a frame
     // leaves none rendering, so that frame drew every shown row's sample.
@@ -1189,7 +1204,7 @@ fn a_wide_fields_menu_takes_its_width_with_the_same_filter_rows() {
 /// Each sample takes its row's whole height.
 #[test]
 fn samples_fill_their_rows_height() {
-    let d = open_menu("test-samples", 20.0, 260.0, egui::vec2(1200.0, 800.0));
+    let d = open_menu_with("test-samples", 20.0, 260.0, egui::vec2(1200.0, 800.0), MenuLook::default(), None, true);
     assert!(!d.samples.is_empty(), "samples are drawn");
     let row = MenuLook::default().row;
     for s in &d.samples {
@@ -1210,7 +1225,7 @@ fn show_samples_on_white_draws_dark_type_on_white_in_every_brightness() {
         let t = Tokens::for_brightness(b);
         for on_white in [false, true] {
             let look = MenuLook { on_white, ..Default::default() };
-            let d = open_menu_with(&format!("test-on-white-{}-{on_white}", b.id()), 20.0, 260.0, egui::vec2(1200.0, 800.0), look, Some(t));
+            let d = open_menu_with(&format!("test-on-white-{}-{on_white}", b.id()), 20.0, 260.0, egui::vec2(1200.0, 800.0), look, Some(t), true);
             assert!(!d.samples.is_empty(), "{}: samples are drawn", b.id());
             for (sample, tint) in d.samples.iter().zip(&d.tints) {
                 let on_paper = d.fills.iter().any(|(r, fill)| *fill == egui::Color32::WHITE && r.expand(0.5).contains_rect(*sample));

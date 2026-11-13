@@ -1154,7 +1154,7 @@ impl Session {
         let st = self.active()?;
         let it = st.interaction.as_ref()?;
         let deferred = std::sync::Arc::ptr_eq(&it.doc, &st.doc);
-        if !self.prefs.bounding_box_while_moving_and_drawing && !(self.tool.id() == "selection" && deferred) {
+        if !(self.prefs.bounding_box_while_moving_and_drawing || self.tool.id() == "selection" && deferred) {
             return None;
         }
         if !matches!(it.label.as_str(), "Move" | "Copy") {

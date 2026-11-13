@@ -109,7 +109,7 @@ pub fn three_d_wireframe_in(doc: Option<&Document>, n: &Node) -> Result<Vec<Path
     // it first). When neither draws, past their limits, the canvas shows the source art and there
     // is no surface to expand.
     let revolve = crate::has_revolve(n) && crate::revolve_art_in(doc, n).is_some();
-    if !revolve && !(has_solid(n) && super::solid_art_in(doc, n).is_some()) {
+    if !(revolve || has_solid(n) && super::solid_art_in(doc, n).is_some()) {
         // The builders' own error says why, when there is one. Revolve's art is cut for Revolve,
         // as the canvas cuts it.
         if crate::has_revolve(n) {
