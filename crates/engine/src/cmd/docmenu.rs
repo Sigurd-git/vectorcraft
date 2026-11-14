@@ -928,7 +928,7 @@ pub(crate) fn guide_remove(s: &mut Session, p: &Value) -> Result<Value> {
     }
     let label = if gone.len() == 1 { "Delete Guide" } else { "Delete Guides" };
     s.edit(label, |d, sel| {
-        d.retain_guides(sel, |g| !g.id.is_some_and(|id| gone.binary_search(&id).is_ok()));
+        d.retain_guides(sel, |g| g.id.is_none_or(|id| gone.binary_search(&id).is_err()));
         Ok(())
     })?;
     Ok(json!({ "count": gone.len() }))

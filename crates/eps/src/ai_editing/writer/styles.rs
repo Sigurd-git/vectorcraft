@@ -960,8 +960,8 @@ fn object_reads(n: &Node, text: &str) -> bool {
     let Some(mut read) = crate::import::read_art_style(section.as_bytes(), "x", own) else { return false };
     let group = matches!(n.kind, NodeKind::Group { .. });
     let image = matches!(n.kind, NodeKind::Image(_));
-    if (image && !(read.image_warp && warped_image(n)))
-        || (!image && !read.simple)
+    let supported = if image { read.image_warp && warped_image(n) } else { read.simple };
+    if !supported
         || (group && !read.appearance.items.is_empty())
         || (!group && read.pathfinder)
         || !crate::import::style_moves_with(section.as_bytes(), "x", n)

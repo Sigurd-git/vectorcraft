@@ -71,19 +71,26 @@ impl Exporter<'_> {
     /// [`Self::children`] with the boxes of the last members in `measured`, in an isolated group
     /// when `isolated`.
     fn measured_children(&mut self, s: &mut Surface, children: &[std::sync::Arc<Node>], page: Rect, measured: &[Measured], isolated: bool) {
-        if !self.knockout {
-            if isolated {
-                s.push_isolated();
-            }
-            let unmeasured = children.len().saturating_sub(measured.len());
-            for (i, c) in children.iter().enumerate() {
-                self.measured_node(s, c, page, false, i.checked_sub(unmeasured).and_then(|i| measured.get(i)));
-            }
-            if isolated {
-                s.pop();
-            }
+        if self.knockout {
+            self.knockout_children(s, children, page, isolated);
             return;
         }
+        if isolated {
+            s.push_isolated();
+        }
+        let unmeasured = children.len().saturating_sub(measured.len());
+        for (i, c) in children.iter().enumerate() {
+            self.measured_node(s, c, page, false, i.checked_sub(unmeasured).and_then(|i| measured.get(i)));
+        }
+        if isolated {
+            s.pop();
+        }
+    }
+
+    // Keep mask construction off the recursive frame for ordinary groups so
+    // nested symbols can draw to the document's depth limit on a 1 MiB stack.
+    #[inline(never)]
+    fn knockout_children(&mut self, s: &mut Surface, children: &[std::sync::Arc<Node>], page: Rect, isolated: bool) {
         let elements: Vec<(&Node, Measured)> = Node::knockout_elements(children)
             .into_iter()
             .map(|c| (&**c, self.measure(c)))
