@@ -425,7 +425,7 @@ fn catalog_path_keys_match_location_policy() {
             wrong.push(format!("is_path_key(`{k}`) is {}", want.is_none()));
         }
         for (c, named) in &catalog {
-            if !named.contains(k) && !(c.params.contains('…') && takes_key(c.params, k)) {
+            if !(named.contains(k) || c.params.contains('…') && takes_key(c.params, k)) {
                 continue;
             }
             let here = if DOCUMENT_PARTS.contains(&(c.id, k.as_str())) { None } else { want };
