@@ -161,7 +161,7 @@ pub(crate) fn names_linked_scripts(cmd: &str, format: &str, p: &Value, artboards
         "svg" | "svgz" | "vectorcraft" | "template" | "eps" => true,
         "ai" | "ait" => {
             let legacy = super::format(format).is_some_and(|f| super::legacy_ai::wanted(cmd, f, p).unwrap_or(false));
-            !legacy && !(format == "ai" && art_page()) && every_artboard()
+            !(legacy || format == "ai" && art_page()) && every_artboard()
         }
         "pdf" => {
             let editing = super::pdf::settings(cmd, p).ok().is_none_or(|s| s.preserve_editing);

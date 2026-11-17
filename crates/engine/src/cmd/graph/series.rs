@@ -1251,7 +1251,7 @@ fn store_label_style(doc: &mut Document, graph: NodeId, role: Role, change: &dyn
         Role::Category => &mut styles.categories,
         Role::Legend => &mut styles.legend,
     };
-    if unless_default && slot.is_none() && style == was && !(sets_fill && !styles.legend_fill_set) {
+    if unless_default && slot.is_none() && style == was && (!sets_fill || styles.legend_fill_set) {
         return false;
     }
     let mut changed = slot.as_ref() != Some(&style);

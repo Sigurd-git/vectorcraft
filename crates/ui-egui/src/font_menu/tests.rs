@@ -1455,7 +1455,9 @@ fn the_recently_added_filter_lists_a_font_installed_just_now() {
     let _ = std::fs::remove_dir_all(&dir);
     std::fs::create_dir_all(&dir).unwrap();
     let file = dir.join("SourceSerif4-Regular.ttf");
-    std::fs::copy(std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../assets/fonts/SourceSerif4-Regular.ttf"), &file).unwrap();
+    // Write a new file: on macOS copying can keep the source file's creation time.
+    let source = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../assets/fonts/SourceSerif4-Regular.ttf");
+    std::fs::write(&file, std::fs::read(source).unwrap()).unwrap();
     let dated = std::fs::metadata(&file).and_then(|m| m.created()).is_ok();
     let db = vectorcraft_text::FontDb::with_font_dirs(vec![dir.clone()]);
     let ctx = egui::Context::default();

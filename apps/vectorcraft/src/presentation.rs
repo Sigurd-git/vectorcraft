@@ -54,6 +54,7 @@ fn flag_value(flag: &str, arg: &str, args: &mut impl Iterator<Item = String>) ->
 
 impl Overrides {
     /// Whether a flag or a variable set the present mode or the frame latency.
+    #[cfg(any(test, not(target_os = "macos")))]
     pub fn is_set(&self) -> bool {
         *self != Self::default()
     }

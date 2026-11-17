@@ -1035,7 +1035,7 @@ fn a_baked_group_with_type_keeps_a_shadow_on_each_copy() {
     use vectorcraft_doc::text::{CharStyle, TextObject};
     let style = CharStyle { size: 40.0, fill: Paint::solid(Color::BLACK), ..Default::default() };
     let words = Node::new(NodeId(161), vectorcraft_doc::NodeKind::Text(Box::new(TextObject::point(Point::new(5.0, 60.0), "IIII", style))));
-    if !crate::outline_text(&words).is_some_and(|o| paths_in(&o) > 0) {
+    if crate::outline_text(&words).is_none_or(|o| paths_in(&o) == 0) {
         eprintln!("skipped: built without fonts (enable vectorcraft-text's bundled-fonts to run it)");
         return;
     }
@@ -1702,7 +1702,7 @@ fn each_copy_of_type_an_image_or_a_symbol_instance_carries_the_shadow_listed_bef
 /// listed before that effect, as the canvas draws it, rather than staying type under one shadow.
 #[test]
 fn baked_type_whose_transform_moves_its_copies_keeps_a_shadow_on_each() {
-    if !crate::outline_text(&type_node(99, vec![])).is_some_and(|o| paths_in(&o) > 0) {
+    if crate::outline_text(&type_node(99, vec![])).is_none_or(|o| paths_in(&o) == 0) {
         eprintln!("skipped: built without fonts (enable vectorcraft-text's bundled-fonts to run it)");
         return;
     }
@@ -1738,7 +1738,7 @@ fn type_carries_its_fills_shadow_on_each_copy() {
         n
     };
     let copying = vec![shadow(10.0, 0.0, 0.0), transform(json!({"moveH": 100, "copies": 1}))];
-    if !crate::outline_text(&type_node(95, vec![])).is_some_and(|o| paths_in(&o) > 0) {
+    if crate::outline_text(&type_node(95, vec![])).is_none_or(|o| paths_in(&o) == 0) {
         eprintln!("type skipped: built without fonts (enable vectorcraft-text's bundled-fonts to run it)");
         return;
     }

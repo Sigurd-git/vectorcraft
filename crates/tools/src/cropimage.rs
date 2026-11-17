@@ -62,7 +62,7 @@ pub fn check_options(values: &serde_json::Map<String, Value>, max: Option<f64>) 
                     max.filter(|m| n > m + 1e-6).map(|m| format!("`ppi` can't be more than {} for this image", (m * 100.0 + 1e-6).floor() / 100.0))
                 }
             },
-            "reference" => (!v.as_u64().is_some_and(|n| n <= 8)).then(|| format!("`reference` must be a whole number from 0 to 8, not {v}")),
+            "reference" => v.as_u64().is_none_or(|n| n > 8).then(|| format!("`reference` must be a whole number from 0 to 8, not {v}")),
             "linked" => (!v.is_boolean()).then(|| format!("`linked` must be true or false, not {v}")),
             _ => None,
         };
